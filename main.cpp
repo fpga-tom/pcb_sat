@@ -18,13 +18,25 @@ extern void cvc4_main();
 extern void cvc4_book_embedding();
 extern void opensmt2_book_embedding();
 
+lbool find(uint64_t num_pages);
+
 int main(int argc, char** argv) {
+    for (uint64_t np = 2; np < 15; np++) {
+        lbool ret = find(np);
+        std::cout << np << " " << ret << std::endl;
+        if (ret == l_True) {
+            break;
+        }
+    }
+}
 
 //    cvc4_book_embedding();
 //    opensmt2_book_embedding();
 //    book_embedding();
+
+lbool find(uint64_t num_pages) {
 #if 1
-    uint64_t num_pages = 14;
+//    uint64_t num_pages = 10;
 #if 0
     std::vector<uint64_t> V = {1,2,3,4,5};
     std::vector<std::pair<uint64_t ,uint64_t >> E = {
@@ -41,22 +53,27 @@ int main(int argc, char** argv) {
     };
 #else
     std::vector<uint64_t > V;
-    std::vector<std::pair<uint64_t ,uint64_t >> E;
+    std::vector<std::pair<int ,int >> E;
 
     srand(2);
-    int V_count = 40;
+    int V_count = 60;
     for(int i = 0; i < V_count; i++) {
         V.emplace_back(i);
     }
-    int pairs = 30;
+    int pairs = 60;
     for(int i = 0; i < pairs; i++) {
         auto r1 = rand() % V_count;
         auto r2 = rand() % V_count;
         while(r1 == r2) {
             r2 = rand() % V_count;
         }
-        E.emplace_back(std::make_pair(r1, r2));
+        auto p = std::make_pair(r1, r2);
+        auto it = std::find(E.begin(), E.end(), p);
+        if(it == E.end()) {
+            E.emplace_back(p);
+        }
     }
+
 #endif
 
     ExpressionFactory f;
@@ -64,6 +81,30 @@ int main(int argc, char** argv) {
     std::vector<expr_t> directions;
     std::vector<expr_t> vars;
 
+#if 0
+    for(uint64_t j = 1; j < V.size(); ++j) {
+        if(left_of.count(V[0]) == 0) {
+            left_of.insert(std::pair<uint64_t , std::map<uint64_t ,expr_t>>(V[0], std::map<uint64_t, expr_t>()));
+        }
+        auto &var = left_of[V[0]];
+
+        expr_t v{"dir_" + std::to_string(V[0]) + "_" + std::to_string(V[j])};
+        vars.emplace_back(v);
+        var.insert(std::pair<uint64_t , expr_t>(V[j], v));
+        directions.emplace_back(v);
+    }
+
+    if(left_of.count(V[1]) == 0) {
+        left_of.insert(std::pair<uint64_t , std::map<uint64_t ,expr_t>>(V[2], std::map<uint64_t, expr_t>()));
+    }
+    auto &var = left_of[V[1]];
+
+    expr_t v{"dir_" + std::to_string(V[1]) + "_" + std::to_string(V[2])};
+    vars.emplace_back(v);
+    var.insert(std::pair<uint64_t , expr_t>(V[2], v));
+    directions.emplace_back(v);
+
+#else
     for(uint64_t i = 0; i < V.size(); ++i) {
         for(uint64_t j = 0; j < V.size(); j++) {
             if (i == j) continue;
@@ -73,11 +114,12 @@ int main(int argc, char** argv) {
             auto &var = left_of[V[i]];
 
             if (V[i] > V[j]) {
-                expr_t v{"dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j])};
+//                expr_t v{"dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j])};
+                expr_t v = left_of[V[j]][V[i]];
                 auto op = f._not(v);
                 vars.emplace_back(v);
                 var.insert(std::pair<uint64_t , expr_t>(V[j], op));
-                directions.emplace_back(op);
+//                directions.emplace_back(op);
             } else {
                 expr_t v{"dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j])};
                 vars.emplace_back(v);
@@ -86,6 +128,7 @@ int main(int argc, char** argv) {
             }
         }
     }
+#endif
 
     expr_t direction = f._and(directions);
 
@@ -140,7 +183,6 @@ int main(int argc, char** argv) {
             uint64_t vl = E[j].second;
 
             if(vi == vk || vi == vl || vj == vk || vj == vl) continue;
-
 
             cross.emplace_back(f._implication(
                     (same_page_rule[i][j]),
@@ -253,14 +295,15 @@ int main(int argc, char** argv) {
     tseitin tseitin(solver, linear);
     boost::apply_visitor(tseitin, target);
 
-    std::cout << linear.size() << std::endl;
+//    std::cout << linear.size() << std::endl;
     solver.add_clause(std::vector<Lit>{Lit(0, false)});
 
 
+    solver.set_verbosity(0);
     lbool ret = solver.solve();
-    solver.print_stats();
-    std::cout << ret << std::endl;
+//    solver.print_stats();
+//    std::cout << ret << std::endl;
 
 #endif
-    return 0;
+    return ret;
 }
