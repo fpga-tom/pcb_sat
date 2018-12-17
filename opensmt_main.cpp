@@ -1,30 +1,56 @@
-#include <iostream>
-#include <cryptominisat5/cryptominisat.h>
-#include <boost/algorithm/string.hpp>
-#include <assert.h>
-#include <vector>
-#include <map>
-#include <sstream>
-#include <fstream>
-#include "Expression.h"
-#include <Python.h>
+//
+// Created by tomas on 12/16/18.
+//
 
-using std::vector;
-using namespace CMSat;
+#include <opensmt/opensmt2.h>
 
-typedef std::map<uint64_t , std::map<uint64_t , expr_t>> mat_t;
 
-extern void cvc4_main();
-extern void cvc4_book_embedding();
-extern void opensmt2_book_embedding();
+typedef std::map<uint64_t , std::map<uint64_t , PTRef>> mat_t;
 
-int main(int argc, char** argv) {
+class SMTPTRefessionFactory {
+    Logic& logic;
+public:
+    SMTPTRefessionFactory(Logic& logic) : logic(logic) {}
+    PTRef _and_head(PTRef exp1, std::vector<PTRef> exp2) {
+        if(exp2.empty()) {
+            return exp1;
+        }
+        PTRef exp = _and_head(exp2.front(), std::vector<PTRef>(exp2.begin() + 1, exp2.end()));
+        return logic.mkAnd(exp1, exp);
+    }
+    PTRef _and(std::vector<PTRef> exp) { return _and_head(exp.front(), std::vector<PTRef>(exp.begin() + 1, exp.end())); }
+    PTRef _and(std::initializer_list<PTRef> exp) { return _and(std::vector<PTRef>(exp)); }
 
-//    cvc4_book_embedding();
-//    opensmt2_book_embedding();
-//    book_embedding();
-#if 1
-    uint64_t num_pages = 14;
+    PTRef _or_head(PTRef exp1, std::vector<PTRef> exp2) {
+        if(exp2.empty()) {
+            return exp1;
+        }
+        PTRef exp = _or_head(exp2.front(), std::vector<PTRef>(exp2.begin() + 1, exp2.end()));
+        return logic.mkOr(exp1, exp);
+    }
+    PTRef _or(std::vector<PTRef> exp) { return _or_head(exp.front(), std::vector<PTRef>(exp.begin() + 1, exp.end())); }
+    PTRef _or(std::initializer_list<PTRef> exp) { return _or(std::vector<PTRef>(exp)); }
+
+    PTRef _implication(PTRef premise, PTRef conclusion) { return _or({_not(premise), conclusion}); }
+    PTRef _not(PTRef exp) { return logic.mkNot(exp); }
+};
+
+void opensmt2_book_embedding() {
+    const char *msg;
+    SMTConfig c;
+//    c.sat_split_threads(6);
+//    c.setOption(SMTConfig::o_dump_query, SMTOption(1), msg);
+//    c.setOption(SMTConfig::o_sat_dump_learnts, SMTOption(1), msg);
+    UFTheory uftheory(c);
+    THandler thandler(c, uftheory);
+    SimpSMTSolver solver(c, thandler);
+    MainSolver mainSolver(thandler, c, &solver, "main_solver");
+
+    Logic& logic = thandler.getLogic();
+    SMTPTRefessionFactory f(logic);
+
+
+    uint64_t num_pages = 13;
 #if 0
     std::vector<uint64_t> V = {1,2,3,4,5};
     std::vector<std::pair<uint64_t ,uint64_t >> E = {
@@ -44,11 +70,11 @@ int main(int argc, char** argv) {
     std::vector<std::pair<uint64_t ,uint64_t >> E;
 
     srand(2);
-    int V_count = 40;
+    int V_count = 100;
     for(int i = 0; i < V_count; i++) {
         V.emplace_back(i);
     }
-    int pairs = 30;
+    int pairs = 100;
     for(int i = 0; i < pairs; i++) {
         auto r1 = rand() % V_count;
         auto r2 = rand() % V_count;
@@ -59,77 +85,76 @@ int main(int argc, char** argv) {
     }
 #endif
 
-    ExpressionFactory f;
+
     mat_t left_of;
-    std::vector<expr_t> directions;
-    std::vector<expr_t> vars;
+    std::vector<PTRef> directions;
+    std::vector<PTRef> vars;
 
     for(uint64_t i = 0; i < V.size(); ++i) {
         for(uint64_t j = 0; j < V.size(); j++) {
             if (i == j) continue;
             if(left_of.count(V[i]) == 0) {
-                left_of.insert(std::pair<uint64_t , std::map<uint64_t ,expr_t>>(V[i], std::map<uint64_t, expr_t>()));
+                left_of.insert(std::pair<uint64_t , std::map<uint64_t ,PTRef>>(V[i], std::map<uint64_t, PTRef>()));
             }
             auto &var = left_of[V[i]];
 
             if (V[i] > V[j]) {
-                expr_t v{"dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j])};
-                auto op = f._not(v);
+                PTRef v = f._not(logic.mkBoolVar(("dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j])).c_str()));
                 vars.emplace_back(v);
-                var.insert(std::pair<uint64_t , expr_t>(V[j], op));
-                directions.emplace_back(op);
+                var.insert(std::pair<uint64_t , PTRef>(V[j], v));
+                directions.emplace_back(v);
             } else {
-                expr_t v{"dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j])};
+                PTRef v = logic.mkBoolVar(("dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j])).c_str());
                 vars.emplace_back(v);
-                var.insert(std::pair<uint64_t , expr_t>(V[j], v));
+                var.insert(std::pair<uint64_t , PTRef>(V[j], v));
                 directions.emplace_back(v);
             }
         }
     }
 
-    expr_t direction = f._and(directions);
+    PTRef direction = f._and(directions);
 
     mat_t page_assign;
-    std::vector<expr_t> pages_formula;
+    std::vector<PTRef> pages_formula;
 
     for(int e = 0; e < E.size(); ++e) {
-        std::vector<expr_t> pages;
+        std::vector<PTRef> pages;
         for (int p = 0; p < num_pages; ++p) {
             if(page_assign.count(p) == 0) {
-                page_assign.insert(std::pair<uint64_t, std::map<uint64_t, expr_t>>(p, std::map<uint64_t, expr_t>()));
+                page_assign.insert(std::pair<uint64_t, std::map<uint64_t, PTRef>>(p, std::map<uint64_t, PTRef>()));
             }
             auto &var = page_assign[p];
 
-            std::string v("page_" + std::to_string(p) + "_" + std::to_string(e));
+            PTRef v = logic.mkBoolVar(("page_" + std::to_string(p) + "_" + std::to_string(e)).c_str());
             vars.emplace_back(v);
-            var.insert(std::pair<uint64_t , expr_t>(e, v));
+            var.insert(std::pair<uint64_t , PTRef>(e, v));
             pages.emplace_back(v);
 
         }
-        expr_t page = f._or(pages);
+        PTRef page = f._or(pages);
         pages_formula.emplace_back(page);
     }
 
-    expr_t all_pages = f._and(pages_formula);
+    PTRef all_pages = f._and(pages_formula);
 
     mat_t same_page_rule;
 
     for (int i = 0;i < E.size(); ++i) {
         for (int j = i + 1; j < E.size(); ++j) {
             if (i == j) continue;
-            std::vector<expr_t> rule;
+            std::vector<PTRef> rule;
             for(int p = 0; p < num_pages; ++p) {
                 rule.emplace_back(f._and({page_assign[p][i], page_assign[p][j]}));
             }
 
             if(same_page_rule.count(i) == 0) {
-                same_page_rule.insert(std::pair<uint64_t , std::map<uint64_t , expr_t>>(i, std::map<uint64_t, expr_t>()));
+                same_page_rule.insert(std::pair<uint64_t , std::map<uint64_t , PTRef>>(i, std::map<uint64_t, PTRef>()));
             }
-            same_page_rule[i].insert(std::pair<uint64_t, expr_t>(j, f._or(rule)));
+            same_page_rule[i].insert(std::pair<uint64_t, PTRef>(j, f._or(rule)));
         }
     }
 
-    std::vector<expr_t> cross;
+    std::vector<PTRef> cross;
 
     for(int i = 0 ; i < E.size(); ++i) {
         for(int j = i+1; j < E.size(); ++j) {
@@ -140,7 +165,6 @@ int main(int argc, char** argv) {
             uint64_t vl = E[j].second;
 
             if(vi == vk || vi == vl || vj == vk || vj == vl) continue;
-
 
             cross.emplace_back(f._implication(
                     (same_page_rule[i][j]),
@@ -182,85 +206,24 @@ int main(int argc, char** argv) {
     }
 
 
-    expr_t all_cross = f._and(cross);
-    expr_t target = f._and({all_pages, direction, all_cross});
+    PTRef all_cross = f._and(cross);
+    PTRef target = f._and({all_pages, direction, all_cross});
 
-#if 0
-    std::stringstream ss;
+    sstat in = mainSolver.push(target);
+    if (in == l_False)    std::cout << "false\n";
+    if (in == l_True)     std::cout << "true\n";
+    if (in == l_Undef) std::cout << "unknown\n";
 
-    ss << "import sympy as sp" << std::endl;
-    ss << "from sympy.abc import *" << std::endl;
-
-    for(const expr_t& vs : vars) {
-        ss << vs << ", ";
-    }
-
-    ss << " = symbols('";
-
-    for(const expr_t& vs : vars) {
-        ss << vs << " ";
-    }
-
-    ss << "')" << std::endl;
-
-    ss << "a = sp.to_cnf(";
-    ss << target;
-    ss << ", False)" << std::endl;
-    ss << "with open('/tmp/cnf.txt', 'w') as f:" << std::endl;
-    ss << "\tfor i in a.args:\n"
-          " \t   print >> f, str(i).";
-    for(int i = 0; i < vars.size(); i++) {
-        ss << "replace('" << vars[i] << "','" << std::to_string(i) << "')";
-        if (i < vars.size() - 1)
-            ss << ".";
-    }
-
-    ss << ".replace(' ', '')" << std::endl;
+    char **msg1;
+//    mainSolver.simplifyFormulas();
+    sstat r = mainSolver.check();
+    mainSolver.writeSolverState("/tmp/solver1.cnf", msg1);
+    mainSolver.writeCnfState("/tmp/solver.cnf", msg1);
 
 
-    Py_SetProgramName(argv[0]);
-    Py_Initialize();
-    PyRun_SimpleString(ss.str().c_str());
-    Py_Finalize();
-#endif
 
-    SATSolver solver;
-    solver.set_num_threads(10);
-#if 0
-    solver.new_vars(vars.size());
+    if (r == l_False)    std::cout << "false\n";
+    if (r == l_True)     std::cout << "true\n";
+    if (r == l_Undef) std::cout << "unknown\n";
 
-    std::ifstream infile("/tmp/cnf.txt");
-    std::string line;
-    std::vector<Lit> clause;
-    while(std::getline(infile, line)) {
-        clause.clear();
-        std::vector<std::string> l;
-        boost::split(l, line, boost::is_any_of("|"));
-        for(auto c : l) {
-            if(c.front() == '~') {
-                clause.emplace_back(Lit(std::stoi(c.substr(1)), true));
-            } else {
-                clause.emplace_back(Lit(std::stoi(c), false));
-            }
-        }
-        solver.add_clause(clause);
-    }
-#endif
-
-    std::vector<expr_t> linear;
-    linearize lz(linear);
-    boost::apply_visitor(lz, target);
-    tseitin tseitin(solver, linear);
-    boost::apply_visitor(tseitin, target);
-
-    std::cout << linear.size() << std::endl;
-    solver.add_clause(std::vector<Lit>{Lit(0, false)});
-
-
-    lbool ret = solver.solve();
-    solver.print_stats();
-    std::cout << ret << std::endl;
-
-#endif
-    return 0;
 }
