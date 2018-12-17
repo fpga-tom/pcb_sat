@@ -9,6 +9,7 @@
 #include <vector>
 #include <boost/variant.hpp>
 #include <cryptominisat5/cryptominisat.h>
+#include <map>
 
 
 struct op_or  { }; // tag
@@ -36,6 +37,10 @@ template <typename tag> struct binop
     bool operator==(const binop& other) const {
         return this->id == other.id;
     }
+
+    bool operator<(const binop& other) const {
+        return this->id < other.id;
+    }
 };
 
 template <typename tag> struct unop
@@ -46,6 +51,10 @@ template <typename tag> struct unop
 
     bool operator==(const unop& other) const {
         return this->id == other.id;
+    }
+
+    bool operator<(const unop& other) const {
+        return this->id < other.id;
     }
 };
 
@@ -107,18 +116,26 @@ struct linearize : boost::static_visitor<void >
 };
 struct tseitin : boost::static_visitor<void >
 {
-    tseitin(CMSat::SATSolver& os, std::vector<expr_t>& lz) : _os(os), _lz(lz) {
-        _os.new_vars(lz.size());
-    }
     std::vector<expr_t>& _lz;
+    std::map<expr_t, uint32_t > _index;
     CMSat::SATSolver& _os;
 
-    uint32_t indexof(const expr_t& ex) const {
-        auto it = std::find(_lz.begin(), _lz.end(), ex);
-        if(it == _lz.end()) {
-            std::cerr << "not found" << std::endl;
+    tseitin(CMSat::SATSolver& os, std::vector<expr_t>& lz) : _os(os), _lz(lz) {
+        _os.new_vars(lz.size());
+        for(int i = 0; i < lz.size(); ++i) {
+            _index.insert(std::make_pair(lz[i], i));
         }
-        return std::distance(_lz.begin(), it);
+
+    }
+
+
+    uint32_t indexof(const expr_t& ex) const {
+        return _index.at(ex);
+//        auto it = std::find(_lz.begin(), _lz.end(), ex);
+//        if(it == _lz.end()) {
+//            std::cerr << "not found" << std::endl;
+//        }
+//        return std::distance(_lz.begin(), it);
     }
     //
     void operator()(const var& v) const {  }

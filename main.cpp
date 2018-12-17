@@ -56,11 +56,11 @@ lbool find(uint64_t num_pages) {
     std::vector<std::pair<int ,int >> E;
 
     srand(2);
-    int V_count = 60;
+    int V_count = 50;
     for(int i = 0; i < V_count; i++) {
         V.emplace_back(i);
     }
-    int pairs = 60;
+    int pairs = 50;
     for(int i = 0; i < pairs; i++) {
         auto r1 = rand() % V_count;
         auto r2 = rand() % V_count;
@@ -295,7 +295,7 @@ lbool find(uint64_t num_pages) {
     tseitin tseitin(solver, linear);
     boost::apply_visitor(tseitin, target);
 
-//    std::cout << linear.size() << std::endl;
+    std::cout << linear.size() << std::endl;
     solver.add_clause(std::vector<Lit>{Lit(0, false)});
 
 
