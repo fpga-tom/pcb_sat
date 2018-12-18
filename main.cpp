@@ -56,11 +56,11 @@ lbool find(uint64_t num_pages) {
     std::vector<std::pair<int ,int >> E;
 
     srand(2);
-    int V_count = 50;
+    int V_count = 80;
     for(int i = 0; i < V_count; i++) {
         V.emplace_back(i);
     }
-    int pairs = 50;
+    int pairs = 80;
     for(int i = 0; i < pairs; i++) {
         auto r1 = rand() % V_count;
         auto r2 = rand() % V_count;
@@ -76,6 +76,7 @@ lbool find(uint64_t num_pages) {
 
 #endif
 
+    std::cout << "generating tree..." << std::endl;
     ExpressionFactory f;
     mat_t left_of;
     std::vector<expr_t> directions;
@@ -105,6 +106,7 @@ lbool find(uint64_t num_pages) {
     directions.emplace_back(v);
 
 #else
+    std::cout << "generating directions..." << std::endl;
     for(uint64_t i = 0; i < V.size(); ++i) {
         for(uint64_t j = 0; j < V.size(); j++) {
             if (i == j) continue;
@@ -121,7 +123,7 @@ lbool find(uint64_t num_pages) {
                 var.insert(std::pair<uint64_t , expr_t>(V[j], op));
 //                directions.emplace_back(op);
             } else {
-                expr_t v{"dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j])};
+                expr_t v = f._var("dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j]));
                 vars.emplace_back(v);
                 var.insert(std::pair<uint64_t , expr_t>(V[j], v));
                 directions.emplace_back(v);
@@ -132,8 +134,10 @@ lbool find(uint64_t num_pages) {
 
     expr_t direction = f._and(directions);
 
+    std::cout << "generating pages..." << std::endl;
     mat_t page_assign;
     std::vector<expr_t> pages_formula;
+
 
     for(int e = 0; e < E.size(); ++e) {
         std::vector<expr_t> pages;
@@ -143,7 +147,7 @@ lbool find(uint64_t num_pages) {
             }
             auto &var = page_assign[p];
 
-            std::string v("page_" + std::to_string(p) + "_" + std::to_string(e));
+            expr_t v = f._var("page_" + std::to_string(p) + "_" + std::to_string(e));
             vars.emplace_back(v);
             var.insert(std::pair<uint64_t , expr_t>(e, v));
             pages.emplace_back(v);
@@ -155,6 +159,7 @@ lbool find(uint64_t num_pages) {
 
     expr_t all_pages = f._and(pages_formula);
 
+    std::cout << "generating same..." << std::endl;
     mat_t same_page_rule;
 
     for (int i = 0;i < E.size(); ++i) {
@@ -172,6 +177,7 @@ lbool find(uint64_t num_pages) {
         }
     }
 
+    std::cout << "generating cross..." << E.size() << std::endl;
     std::vector<expr_t> cross;
 
     for(int i = 0 ; i < E.size(); ++i) {
@@ -224,8 +230,14 @@ lbool find(uint64_t num_pages) {
     }
 
 
+    std::cout << cross.size() << std::endl;
+    std::cout << "and... before 1 " << f.count << std::endl;
     expr_t all_cross = f._and(cross);
+    std::cout << "and... after 1 " << f.count << std::endl;
+    std::cout << "and..." << std::endl;
+    std::cout << "and... before 2 " << f.count << std::endl;
     expr_t target = f._and({all_pages, direction, all_cross});
+    std::cout << "and... after 2 " << f.count << std::endl;
 
 #if 0
     std::stringstream ss;
@@ -266,6 +278,7 @@ lbool find(uint64_t num_pages) {
     Py_Finalize();
 #endif
 
+    std::cout << "generating solver.." << std::endl;
     SATSolver solver;
     solver.set_num_threads(10);
 #if 0
@@ -289,9 +302,12 @@ lbool find(uint64_t num_pages) {
     }
 #endif
 
-    std::vector<expr_t> linear;
+
+    std::vector<uint32_t > linear;
+    std::cout << "linearizing..." << std::endl;
     linearize lz(linear);
     boost::apply_visitor(lz, target);
+    std::cout << "tseitin..." << std::endl;
     tseitin tseitin(solver, linear);
     boost::apply_visitor(tseitin, target);
 
