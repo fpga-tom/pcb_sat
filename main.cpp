@@ -7,21 +7,16 @@
 #include <sstream>
 #include <fstream>
 #include "Expression.h"
-#include <Python.h>
 
 using std::vector;
 using namespace CMSat;
 
 typedef std::map<uint64_t , std::map<uint64_t , expr_t>> mat_t;
 
-extern void cvc4_main();
-extern void cvc4_book_embedding();
-extern void opensmt2_book_embedding();
-
 lbool find(uint64_t num_pages);
 
 int main(int argc, char** argv) {
-    for (uint64_t np = 2; np < 15; np++) {
+    for (uint64_t np = 5; np < 15; np++) {
         lbool ret = find(np);
         std::cout << np << " " << ret << std::endl;
         if (ret == l_True) {
@@ -30,9 +25,6 @@ int main(int argc, char** argv) {
     }
 }
 
-//    cvc4_book_embedding();
-//    opensmt2_book_embedding();
-//    book_embedding();
 
 lbool find(uint64_t num_pages) {
 #if 1
@@ -51,16 +43,17 @@ lbool find(uint64_t num_pages) {
             std::make_pair(2,5),
             std::make_pair(3,5)
     };
+
 #else
     std::vector<uint64_t > V;
     std::vector<std::pair<int ,int >> E;
 
     srand(2);
-    int V_count = 60;
+    int V_count = 70;
     for(int i = 0; i < V_count; i++) {
         V.emplace_back(i);
     }
-    int pairs = 60;
+    int pairs = 70;
     for(int i = 0; i < pairs; i++) {
         auto r1 = rand() % V_count;
         auto r2 = rand() % V_count;
@@ -77,10 +70,7 @@ lbool find(uint64_t num_pages) {
 #endif
 
     std::cout << "generating tree..." << std::endl;
-    ExpressionFactory f;
     mat_t left_of;
-    std::vector<expr_t> directions;
-    std::vector<expr_t> vars;
 
 #if 0
     for(uint64_t j = 1; j < V.size(); ++j) {
@@ -117,38 +107,26 @@ lbool find(uint64_t num_pages) {
             auto &var = left_of[V[i]];
 
             if (V[i] > V[j]) {
-//                expr_t v{"dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j])};
-                expr_t v (left_of[V[j]][V[i]]);
-                auto op = f._not(v);
-                vars.emplace_back(v);
-                var.insert(std::pair<uint64_t , expr_t>(V[j], op));
-//                directions.emplace_back(op);
+                var.insert(std::pair<uint64_t , expr_t>(V[j], !left_of[V[j]][V[i]]) );
             } else {
-                expr_t v = f._var("dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j]));
-                vars.emplace_back(v);
+                expr_t v(new expr_s("dir_" + std::to_string(V[i]) + "_" + std::to_string(V[j])));
                 var.insert(std::pair<uint64_t , expr_t>(V[j], v));
-                directions.emplace_back(v);
-                if(i == 0 && j == 0)
+                if(direction.get() == nullptr)
                     direction = v;
                 else
-                    direction = f._and(direction, v);
+                    direction = direction && v;
             }
         }
     }
 #endif
 
-//    expr_t direction = f._and(directions);
 
     std::cout << "generating pages..." << std::endl;
     mat_t page_assign;
-//    std::vector<expr_t> pages_formula;
-
-
 
 //    expr_t pages_formula;
     expr_t all_pages;
     for(int e = 0; e < E.size(); ++e) {
-//        std::vector<expr_t> pages;
         expr_t page;
         for (int p = 0; p < num_pages; ++p) {
             if(page_assign.count(p) == 0) {
@@ -156,25 +134,20 @@ lbool find(uint64_t num_pages) {
             }
             auto &var = page_assign[p];
 
-            expr_t v = f._var("page_" + std::to_string(p) + "_" + std::to_string(e));
-            vars.emplace_back(v);
+            expr_t v(new expr_s("page_" + std::to_string(p) + "_" + std::to_string(e)));
             var.insert(std::pair<uint64_t , expr_t>(e, v));
-//            pages.emplace_back(v);
-            if (p == 0)
+            if (page.get() == nullptr)
                 page = v;
             else
-                page = f._or(page, v);
+                page = page || v;
 
         }
-//        expr_t page = f._or(pages);
-//        pages_formula.emplace_back(page);
         if( e == 0)
             all_pages = page;
         else
-            all_pages = f._and(all_pages, page);
+            all_pages = all_pages && page;
     }
 
-//    expr_t all_pages = f._and(pages_formula);
 
     std::cout << "generating same..." << std::endl;
     mat_t same_page_rule;
@@ -182,13 +155,12 @@ lbool find(uint64_t num_pages) {
     for (int i = 0;i < E.size(); ++i) {
         for (int j = i + 1; j < E.size(); ++j) {
             if (i == j) continue;
-//            std::vector<expr_t> rule;
             expr_t rule;
             for(int p = 0; p < num_pages; ++p) {
-                if ( p == 0 )
-                    rule = f._and(page_assign[p][i], page_assign[p][j]);
+                if ( rule.get() == nullptr )
+                    rule = page_assign[p][i] && page_assign[p][j];
                 else
-                    rule = f._or(rule, f._and(page_assign[p][i], page_assign[p][j]));
+                    rule = (rule || (page_assign[p][i] && page_assign[p][j]));
             }
 
             if(same_page_rule.count(i) == 0) {
@@ -201,6 +173,8 @@ lbool find(uint64_t num_pages) {
     std::cout << "generating cross..." << E.size() << std::endl;
     expr_t cross;
 
+    int count = 0;
+    uint64_t delta_sum = 0;
     for(int i = 0 ; i < E.size(); ++i) {
         for(int j = i+1; j < E.size(); ++j) {
             if (i == j) continue;
@@ -211,60 +185,31 @@ lbool find(uint64_t num_pages) {
 
             if(vi == vk || vi == vl || vj == vk || vj == vl) continue;
 
-            expr_t c = (f._implication(
-                    (same_page_rule[i][j]),
-                    (f._and(
-                            f._not(f._and(
-                                    left_of[vi][vk],
-                                    left_of[vk][vj],
-                                    left_of[vj][vl])),
-                            f._not(f._and(
-                                    left_of[vi][vl],
-                                    left_of[vl][vj],
-                                    left_of[vj][vk])),
-                            f._not(f._and(
-                                    left_of[vj][vk],
-                                    left_of[vk][vi],
-                                    left_of[vi][vl])),
-                            f._not(f._and(
-                                    left_of[vj][vl],
-                                    left_of[vl][vi],
-                                    left_of[vi][vk])),
-                            f._not(f._and(
-                                    left_of[vk][vi],
-                                    left_of[vi][vl],
-                                    left_of[vl][vj])),
-                            f._not(f._and(
-                                    left_of[vk][vj],
-                                    left_of[vj][vl],
-                                    left_of[vl][vi])),
-                            f._not(f._and(
-                                    left_of[vl][vi],
-                                    left_of[vi][vk],
-                                    left_of[vk][vj])),
-                            f._not(f._and(
-                                    left_of[vl][vj],
-                                    left_of[vj][vk],
-                                    left_of[vk][vi]))
-                    ))));
+            expr_t c = (
+                    same_page_rule[i][j] >>
+                    (
+                            !(left_of[vi][vk] && left_of[vk][vj] && left_of[vj][vl]) &&
+                            !(left_of[vi][vl] && left_of[vl][vj] && left_of[vj][vk]) &&
+                            !(left_of[vj][vk] && left_of[vk][vi] && left_of[vi][vl]) &&
+                            !(left_of[vj][vl] && left_of[vl][vi] && left_of[vi][vk]) &&
+                            !(left_of[vk][vi] && left_of[vi][vl] && left_of[vl][vj]) &&
+                            !(left_of[vk][vj] && left_of[vj][vl] && left_of[vl][vi]) &&
+                            !(left_of[vl][vi] && left_of[vi][vk] && left_of[vk][vj]) &&
+                            !(left_of[vl][vj] && left_of[vj][vk] && left_of[vk][vi])
+                    ));
 
-            if(i == 0)
+            if(cross.get() == nullptr)
                 cross = c;
-            else
-                cross = f._and(cross, c);
+            else {
+                cross = cross && c;
+            }
 
         }
     }
 
 
-//    std::cout << cross.size() << std::endl;
-    std::cout << "and... before 1 " << f.count << std::endl;
-//    expr_t all_cross = f._and(cross);
-    std::cout << "and... after 1 " << f.count << std::endl;
-    std::cout << "and..." << std::endl;
-    std::cout << "and... before 2 " << f.count << std::endl;
-    expr_t target = f._and(all_pages, direction, cross);
-    std::cout << "and... after 2 " << f.count << std::endl;
+
+    expr_t target = all_pages && direction && cross;
 
 #if 0
     std::stringstream ss;
@@ -330,13 +275,13 @@ lbool find(uint64_t num_pages) {
 #endif
 
 
-    std::vector<uint32_t > linear;
+    std::vector<uint64_t > linear;
     std::cout << "linearizing..." << std::endl;
     linearize lz(linear);
-    boost::apply_visitor(lz, target);
+    lz(target);
     std::cout << "tseitin..." << std::endl;
     tseitin tseitin(solver, linear);
-    boost::apply_visitor(tseitin, target);
+    tseitin(target);
 
     std::cout << linear.size() << std::endl;
     solver.add_clause(std::vector<Lit>{Lit(0, false)});
