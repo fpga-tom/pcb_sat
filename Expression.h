@@ -72,12 +72,14 @@ struct tseitin
 {
     std::vector<uint64_t >& _lz;
     std::map<uint64_t , uint64_t > _index;
+    std::map<uint64_t , uint64_t > _index_reverse;
     CMSat::SATSolver& _os;
 
     tseitin(CMSat::SATSolver& os, std::vector<uint64_t >& lz) : _os(os), _lz(lz) {
         _os.new_vars(lz.size());
         for(int i = 0; i < lz.size(); ++i) {
             _index.insert(std::make_pair(lz[i], i));
+            _index_reverse.insert(std::make_pair(i, lz[i]));
         }
 
     }
@@ -85,6 +87,10 @@ struct tseitin
 
     uint64_t indexof(const expr_t&  ex) const {
         return _index.at((uint64_t )ex.get());
+    }
+
+    expr_t indexof(const uint64_t node) const {
+        return expr_t(*((expr_t*)_index_reverse.at(node)));
     }
 
     void operator_var(expr_t& v) const {  }
