@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(pcb_sat)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 
 FIND_PACKAGE(PythonInterp)
@@ -36,5 +36,5 @@ endif()
 
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS} /usr/include/z3)
 add_executable(pcb_sat main.cpp Expression.cpp Expression.h z3_main.cpp cvc4_main.cpp opensmt_main.cpp)
-target_compile_options(pcb_sat PUBLIC -O2 -march=native)
+target_compile_options(pcb_sat PUBLIC -O3 -march=native)
 target_link_libraries(pcb_sat ${CRYPTOMINISAT5_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} z3 cvc4 gmp opensmt2)

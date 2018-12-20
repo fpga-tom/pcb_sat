@@ -8,9 +8,11 @@
 #include <string>
 #include <vector>
 #include <boost/variant.hpp>
+#include <boost/spirit/home/x3/support/ast/variant.hpp>
 #include <cryptominisat5/cryptominisat.h>
 #include <map>
 #include <numeric>
+//#include <variant>
 
 
 struct op_or  { }; // tag
@@ -18,8 +20,9 @@ struct op_and { }; // tag
 struct op_not { }; // tag
 
 typedef struct _var {
-    _var() {}
-    _var(const std::string& str, uint32_t id) : str(str), id(id) {}
+    _var() { }
+    _var(const std::string& str, uint32_t id) : str(str), id(id) { }
+//    _var(const _var& other) : str(other.str), id(other.id) {}
     std::string str;
     uint32_t id;
 
@@ -38,32 +41,25 @@ typedef struct _var {
 template <typename tag> struct binop;
 template <typename tag> struct unop;
 
+
+
 typedef boost::variant<var,
-boost::recursive_wrapper<unop <op_not> >,
-boost::recursive_wrapper<binop<op_and> >,
-boost::recursive_wrapper<binop<op_or> >
+boost::recursive_wrapper<unop<op_not>>,
+boost::recursive_wrapper<binop<op_and>>,
+boost::recursive_wrapper<binop<op_or>>
 > expr_t;
 
 
 
 template <typename tag> struct binop
 {
-    binop(const expr_t&& l, const expr_t&& r, uint32_t id) : oper1(l), oper2(r), id(id) { }
+    binop(const expr_t& l, const expr_t& r, uint32_t id) : oper1(l), oper2(r), id(id) { }
 
-//    explicit binop(expr_t&& l, expr_t&& r, uint32_t id) : oper1(l), oper2(r), id(id) { }
-    /*
-    binop(const binop&& other) : oper1(std::move(other.oper1)), oper2(std::move(other.oper2)), id(std::move(other.id)) {}
-    binop(const binop& other) : oper1(other.oper1), oper2(other.oper2), id(other.id) {}
-    binop<tag>& operator=(binop<tag>&& other)  {
-        oper1 = std::move(other.oper1);
-        oper2 = std::move(other.oper2);
-        id = std::move(other.id);
-        return *this;
-    }
-     */
+
     expr_t oper1, oper2;
     uint32_t id;
 
+    virtual ~binop() {}
     bool operator==(const binop& other) const {
         return this->id == other.id;
     }
@@ -79,21 +75,13 @@ template <typename tag> struct binop
 
 template <typename tag> struct unop
 {
-    unop(const expr_t&& o, uint32_t id) : oper1(o), id(id) { }
-//    explicit unop(expr_t&& o, uint32_t id) : oper1(o), id(id) { }
-    /*
-    unop(const unop&& other) : oper1(std::move(other.oper1)), id(std::move(other.id)) {}
-    unop(const unop& other) : oper1(std::move(other.oper1)), id(std::move(other.id)) {}
-     unop<tag>& operator=(unop<tag>&& other)  {
-        oper1 = std::move(other.oper1);
-        id = std::move(other.id);
-        return *this;
-    }
-     */
+    unop(const expr_t& o, uint32_t id) : oper1(o), id(id) { }
+
     expr_t oper1;
     uint32_t id;
 
 
+    virtual ~unop() {}
 
     bool operator==(const unop& other) const {
         return this->id == other.id;
@@ -108,14 +96,14 @@ template <typename tag> struct unop
     }
 };
 
-/*
-struct printer : boost::static_visitor<void>
+
+struct printer : public boost::static_visitor<void>
 {
     printer(std::ostream& os) : _os(os) {}
     std::ostream& _os;
 
     //
-    void operator()(const var& v) const { _os << v; }
+    void operator()(const var& v) const { _os << v.str; }
 
     void operator()(const binop<op_and>& b) const { print(" & ", b.oper1, b.oper2); }
     void operator()(const binop<op_or >& b) const { print(" | ", b.oper1, b.oper2); }
@@ -137,11 +125,11 @@ struct printer : boost::static_visitor<void>
         _os << ")";
     }
 };
- */
+
 
 std::ostream& operator<<(std::ostream& os, const expr_t& e);
 
-struct linearize : boost::static_visitor<void >
+struct linearize : public boost::static_visitor<void>
 {
     linearize(std::vector<uint32_t >& os) : _os(os) {}
     std::vector<uint32_t >& _os;
@@ -166,7 +154,7 @@ struct linearize : boost::static_visitor<void >
         boost::apply_visitor(*this, u.oper1);
     }
 };
-struct tseitin : boost::static_visitor<void >
+struct tseitin : public boost::static_visitor<void>
 {
     std::vector<uint32_t >& _lz;
     std::map<uint32_t , uint32_t > _index;
@@ -281,25 +269,38 @@ class ExpressionFactory {
 public:
     int count;
     ExpressionFactory() : count(0) {}
-    expr_t _and_head(const expr_t& exp1, const std::vector<expr_t>::const_iterator exp2, const std::vector<expr_t>::const_iterator exp2_end) {
-        if(exp2 == exp2_end) {
-            return exp1;
-        }
-        const expr_t exp = _and_head(*exp2, std::next(exp2), exp2_end);
-        return binop<op_and>(std::move(exp1), std::move(exp), count++);
-    }
-    expr_t _and(const std::vector<expr_t>& exp) { return _and_head(exp.front(), std::next(exp.begin()), exp.end()); }
-    expr_t _and(const std::initializer_list<expr_t>& exp) { return _and(std::vector<expr_t>(exp)); }
+//    expr_t _and_head(const expr_t& exp1, const std::vector<expr_t>::const_iterator exp2, const std::vector<expr_t>::const_iterator exp2_end) {
+//        std::cout << "\\" << count << std::endl;
+//        if(exp2 == exp2_end) {
+//            std::cout << "\\ end" << count << std::endl;
+//            return exp1;
+//        }
+//        const expr_t exp = _and_head(*exp2, std::next(exp2), exp2_end);
+//        return binop<op_and>(std::move(exp1), std::move(exp), count++);
+//    }
+    template <typename T>
+    expr_t _and(const T& exp) { return exp; }
+    template <typename T, typename ...Ts>
+    expr_t _and(const T& head, const Ts&... tail) { return binop<op_and>(head, _and(tail...), count++); }
+//    expr_t _and(const std::vector<expr_t>& exp) { return _and(exp.front(), std::vector<expr_t>(std::next(exp.begin()), exp.end())); }
 
-    expr_t _or_head(const expr_t& exp1, const std::vector<expr_t>::const_iterator exp2, const std::vector<expr_t>::const_iterator exp2_end) {
-        if(exp2 == exp2_end) {
-            return exp1;
-        }
-        const expr_t exp = _or_head(*exp2, std::next(exp2), exp2_end);
-        return binop<op_or>(std::move(exp1), std::move(exp), count++);
-    }
-    expr_t _or(const std::vector<expr_t>& exp) { return _or_head(exp.front(), std::next(exp.begin()), exp.end()); }
-    expr_t _or(const std::initializer_list<expr_t>& exp) { return _or(std::vector<expr_t>(exp)); }
+    template <typename T>
+    expr_t _or(const T& exp) { return exp; }
+    template <typename T, typename ...Ts>
+    expr_t _or(const T& head, const Ts&... tail) { return binop<op_or>(head, _or(tail...), count++); }
+//    expr_t _or(const std::vector<expr_t>& exp) { return _or(exp.front(), std::vector<expr_t>(std::next(exp.begin()), exp.end())); }
+
+//    expr_t _and(const std::initializer_list<expr_t>& exp) { return _and(std::vector<expr_t>(exp)); }
+
+//    expr_t _or_head(const expr_t& exp1, const std::vector<expr_t>::const_iterator exp2, const std::vector<expr_t>::const_iterator exp2_end) {
+//        if(exp2 == exp2_end) {
+//            return exp1;
+//        }
+//        const expr_t exp = _or_head(*exp2, std::next(exp2), exp2_end);
+//        return binop<op_or>(std::move(exp1), std::move(exp), count++);
+//    }
+//    expr_t _or(const std::vector<expr_t>& exp) { return _or_head(exp.front(), std::next(exp.begin()), exp.end()); }
+//    expr_t _or(const std::initializer_list<expr_t>& exp) { return _or(std::vector<expr_t>(exp)); }
 //    expr_t _and(std::vector<expr_t>&& exp) { return std::accumulate(std::next(exp.begin()), exp.end(), exp[0], [this](expr_t& a, expr_t& b) {
 //        return binop<op_and>(std::move(a), std::move(b), count++);
 //    }); }
@@ -325,7 +326,7 @@ public:
 //            return binop<op_or>(std::move(a), std::move(b), count++);
 //        }); }
 
-    expr_t _implication(const expr_t& premise, const expr_t& conclusion) { return _or({_not(premise), conclusion}); }
+    expr_t _implication(const expr_t& premise, const expr_t& conclusion) { return _or(_not(premise), conclusion); }
     expr_t _not(const expr_t& exp) { return unop<op_not>(std::move(exp), count++); }
     expr_t _var(const std::string& v) { return var(v, count++); }
 };
