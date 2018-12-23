@@ -73,10 +73,11 @@ struct tseitin
     std::vector<uint64_t >& _lz;
     std::map<uint64_t , uint64_t > _index;
     std::map<uint64_t , uint64_t > _index_reverse;
-    CMSat::SATSolver& _os;
+    std::vector<std::vector<CMSat::Lit>>& _os;
+//    CMSat::SATSolver& _os;
 
-    tseitin(CMSat::SATSolver& os, std::vector<uint64_t >& lz) : _os(os), _lz(lz) {
-        _os.new_vars(lz.size());
+    tseitin(std::vector<std::vector<CMSat::Lit>>& os, std::vector<uint64_t >& lz) : _os(os), _lz(lz) {
+//        _os.new_vars(lz.size());
         for(int i = 0; i < lz.size(); ++i) {
             _index.insert(std::make_pair(lz[i], i));
             _index_reverse.insert(std::make_pair(i, lz[i]));
@@ -120,18 +121,21 @@ struct tseitin
 
         clause.emplace_back(CMSat::Lit(_a, true));
         clause.emplace_back(CMSat::Lit(_b, false));
-        _os.add_clause(clause);
+//        _os.add_clause(clause);
+        _os.emplace_back(clause);
         clause.clear();
 
         clause.emplace_back(CMSat::Lit(_a, true));
         clause.emplace_back(CMSat::Lit(_c, false));
-        _os.add_clause(clause);
+//        _os.add_clause(clause);
+        _os.emplace_back(clause);
         clause.clear();
 
         clause.emplace_back(CMSat::Lit(_a, false));
         clause.emplace_back(CMSat::Lit(_b, true));
         clause.emplace_back(CMSat::Lit(_c, true));
-        _os.add_clause(clause);
+//        _os.add_clause(clause);
+        _os.emplace_back(clause);
         clause.clear();
     }
     void operator_or(expr_t& b) const {
@@ -146,18 +150,21 @@ struct tseitin
 
         clause.emplace_back(CMSat::Lit(_a, false));
         clause.emplace_back(CMSat::Lit(_b, true));
-        _os.add_clause(clause);
+//        _os.add_clause(clause);
+        _os.emplace_back(clause);
         clause.clear();
 
         clause.emplace_back(CMSat::Lit(_a, false));
         clause.emplace_back(CMSat::Lit(_c, true));
-        _os.add_clause(clause);
+//        _os.add_clause(clause);
+        _os.emplace_back(clause);
         clause.clear();
 
         clause.emplace_back(CMSat::Lit(_a, true));
         clause.emplace_back(CMSat::Lit(_b, false));
         clause.emplace_back(CMSat::Lit(_c, false));
-        _os.add_clause(clause);
+//        _os.add_clause(clause);
+        _os.emplace_back(clause);
         clause.clear();
     }
 
@@ -172,12 +179,14 @@ struct tseitin
 
         clause.emplace_back(CMSat::Lit(_a, true));
         clause.emplace_back(CMSat::Lit(_b, true));
-        _os.add_clause(clause);
+//        _os.add_clause(clause);
+        _os.emplace_back(clause);
         clause.clear();
 
         clause.emplace_back(CMSat::Lit(_a, false));
         clause.emplace_back(CMSat::Lit(_b, false));
-        _os.add_clause(clause);
+//        _os.add_clause(clause);
+        _os.emplace_back(clause);
         clause.clear();
     }
 };
@@ -205,6 +214,12 @@ expr_t operator>>(const expr_t& a,const expr_t& b) {
     assert(a.get() != nullptr);
     assert(b.get() != nullptr);
     return !a || b;
+}
+
+expr_t operator*(const expr_t& a,const expr_t& b) {
+    assert(a.get() != nullptr);
+    assert(b.get() != nullptr);
+    return (a >> b) && (b >> a);
 }
 
 
