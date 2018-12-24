@@ -322,7 +322,7 @@ lbool find(uint64_t num_pages) {
 #endif
 #endif
 
-    Solg_solver solg(Solg_solver::gate_t::_and);
+    Solg_solver solg(Solg_solver::gate_t::_or);
     solg.rk4();
 
     return ret;
