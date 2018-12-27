@@ -15,215 +15,220 @@
 #include <map>
 #include <numeric>
 
+namespace expression {
 
-struct expr_s;
-typedef std::shared_ptr<expr_s> expr_t;
-enum class expr_type_e {_var, _op_not, _op_and, _op_or};
-struct expr_s {
+    struct expr_s;
+    typedef std::shared_ptr<expr_s> expr_t;
+    enum class expr_type_e {
+        _var, _op_not, _op_and, _op_or
+    };
 
-    expr_s(const expr_t oper1, expr_type_e type) : oper1(oper1), type(type) {}
-    explicit expr_s(const std::string& var) : var(var), type(expr_type_e::_var) {}
-    expr_s(const expr_t oper1, const expr_t oper2, expr_type_e type) : oper1(oper1), oper2(oper2), type(type) {}
+    struct expr_s {
 
-    expr_t oper1;
-    expr_t oper2;
-    const std::string var;
-    expr_type_e type;
+        expr_s(const expr_t oper1, expr_type_e type) : oper1(oper1), type(type) {}
 
-};
+        explicit expr_s(const std::string &var) : var(var), type(expr_type_e::_var) {}
 
-struct linearize
-{
-    linearize(std::vector<uint64_t >& os) : _os(os) {}
-    std::vector<uint64_t >& _os;
+        expr_s(const expr_t oper1, const expr_t oper2, expr_type_e type) : oper1(oper1), oper2(oper2), type(type) {}
 
-    void operator()(expr_t& ex) const {
-        if(ex->type == expr_type_e::_var) {
-            operator_var(ex);
-        } else if(ex->type == expr_type_e::_op_and) {
-            operator_and(ex);
-        } else if(ex->type == expr_type_e::_op_or) {
-            operator_or(ex);
-        } else if(ex->type == expr_type_e::_op_not) {
-            operator_not(ex);
+        expr_t oper1;
+        expr_t oper2;
+        const std::string var;
+        expr_type_e type;
+
+    };
+
+    struct linearize {
+        linearize(std::vector<uint64_t> &os) : _os(os) {}
+
+        std::vector<uint64_t> &_os;
+
+        void operator()(expr_t &ex) const {
+            if (ex->type == expr_type_e::_var) {
+                operator_var(ex);
+            } else if (ex->type == expr_type_e::_op_and) {
+                operator_and(ex);
+            } else if (ex->type == expr_type_e::_op_or) {
+                operator_or(ex);
+            } else if (ex->type == expr_type_e::_op_not) {
+                operator_not(ex);
+            }
         }
-    }
 
-    void operator_var(expr_t& v) const { _os.emplace_back((uint64_t )v.get()); }
+        void operator_var(expr_t &v) const { _os.emplace_back((uint64_t) v.get()); }
 
-    void operator_and(expr_t& b) const {
-        _os.emplace_back((uint64_t )b.get());
-        this->operator()(b->oper1);
-        this->operator()(b->oper2);
-    }
-    void operator_or(expr_t& b) const {
-        _os.emplace_back((uint64_t )b.get());
-        this->operator()(b->oper1);
-        this->operator()(b->oper2);
-    }
+        void operator_and(expr_t &b) const {
+            _os.emplace_back((uint64_t) b.get());
+            this->operator()(b->oper1);
+            this->operator()(b->oper2);
+        }
 
-    void operator_not(expr_t& u) const
-    {
-        _os.emplace_back((uint64_t )u.get());
-        this->operator()(u->oper1);
-    }
-};
-struct tseitin
-{
-    std::vector<uint64_t >& _lz;
-    std::map<uint64_t , uint64_t > _index;
-    std::map<uint64_t , uint64_t > _index_reverse;
-    std::vector<std::vector<CMSat::Lit>>& _os;
+        void operator_or(expr_t &b) const {
+            _os.emplace_back((uint64_t) b.get());
+            this->operator()(b->oper1);
+            this->operator()(b->oper2);
+        }
+
+        void operator_not(expr_t &u) const {
+            _os.emplace_back((uint64_t) u.get());
+            this->operator()(u->oper1);
+        }
+    };
+
+    struct tseitin {
+        std::vector<uint64_t> &_lz;
+        std::map<uint64_t, uint64_t> _index;
+        std::map<uint64_t, uint64_t> _index_reverse;
+        std::vector<std::vector<CMSat::Lit>> &_os;
 //    CMSat::SATSolver& _os;
 
-    tseitin(std::vector<std::vector<CMSat::Lit>>& os, std::vector<uint64_t >& lz) : _os(os), _lz(lz) {
+        tseitin(std::vector<std::vector<CMSat::Lit>> &os, std::vector<uint64_t> &lz) : _os(os), _lz(lz) {
 //        _os.new_vars(lz.size());
-        for(int i = 0; i < lz.size(); ++i) {
-            _index.insert(std::make_pair(lz[i], i));
-            _index_reverse.insert(std::make_pair(i, lz[i]));
+            for (int i = 0; i < lz.size(); ++i) {
+                _index.insert(std::make_pair(lz[i], i));
+                _index_reverse.insert(std::make_pair(i, lz[i]));
+            }
+
         }
 
-    }
 
-
-    uint64_t indexof(const expr_t&  ex) const {
-        return _index.at((uint64_t )ex.get());
-    }
-
-    expr_t indexof(const uint64_t node) const {
-        return expr_t(*((expr_t*)_index_reverse.at(node)));
-    }
-
-    void operator_var(expr_t& v) const {  }
-
-    void operator()(expr_t& ex) const {
-        if(ex->type == expr_type_e::_var) {
-            operator_var(ex);
-        } else if(ex->type == expr_type_e::_op_and) {
-            operator_and(ex);
-        } else if(ex->type == expr_type_e::_op_or) {
-            operator_or(ex);
-        } else if(ex->type == expr_type_e::_op_not) {
-            operator_not(ex);
+        uint64_t indexof(const expr_t &ex) const {
+            return _index.at((uint64_t) ex.get());
         }
+
+        expr_t indexof(const uint64_t node) const {
+            return expr_t(*((expr_t *) _index_reverse.at(node)));
+        }
+
+        void operator_var(expr_t &v) const {}
+
+        void operator()(expr_t &ex) const {
+            if (ex->type == expr_type_e::_var) {
+                operator_var(ex);
+            } else if (ex->type == expr_type_e::_op_and) {
+                operator_and(ex);
+            } else if (ex->type == expr_type_e::_op_or) {
+                operator_or(ex);
+            } else if (ex->type == expr_type_e::_op_not) {
+                operator_not(ex);
+            }
+        }
+
+        void operator_and(expr_t &b) const {
+            std::vector<CMSat::Lit> clause;
+
+            uint64_t _a = indexof(b);
+            uint64_t _b = indexof(b->oper1);
+            uint64_t _c = indexof(b->oper2);
+
+            this->operator()(b->oper1);
+            this->operator()(b->oper2);
+
+
+            clause.emplace_back(CMSat::Lit(_a, true));
+            clause.emplace_back(CMSat::Lit(_b, false));
+//        _os.add_clause(clause);
+            _os.emplace_back(clause);
+            clause.clear();
+
+            clause.emplace_back(CMSat::Lit(_a, true));
+            clause.emplace_back(CMSat::Lit(_c, false));
+//        _os.add_clause(clause);
+            _os.emplace_back(clause);
+            clause.clear();
+
+            clause.emplace_back(CMSat::Lit(_a, false));
+            clause.emplace_back(CMSat::Lit(_b, true));
+            clause.emplace_back(CMSat::Lit(_c, true));
+//        _os.add_clause(clause);
+            _os.emplace_back(clause);
+            clause.clear();
+        }
+
+        void operator_or(expr_t &b) const {
+            std::vector<CMSat::Lit> clause;
+            uint64_t _a = indexof(b);
+            uint64_t _b = indexof(b->oper1);
+            uint64_t _c = indexof(b->oper2);
+
+            this->operator()(b->oper1);
+            this->operator()(b->oper2);
+
+
+            clause.emplace_back(CMSat::Lit(_a, false));
+            clause.emplace_back(CMSat::Lit(_b, true));
+//        _os.add_clause(clause);
+            _os.emplace_back(clause);
+            clause.clear();
+
+            clause.emplace_back(CMSat::Lit(_a, false));
+            clause.emplace_back(CMSat::Lit(_c, true));
+//        _os.add_clause(clause);
+            _os.emplace_back(clause);
+            clause.clear();
+
+            clause.emplace_back(CMSat::Lit(_a, true));
+            clause.emplace_back(CMSat::Lit(_b, false));
+            clause.emplace_back(CMSat::Lit(_c, false));
+//        _os.add_clause(clause);
+            _os.emplace_back(clause);
+            clause.clear();
+        }
+
+        void operator_not(expr_t &u) const {
+            std::vector<CMSat::Lit> clause;
+
+            uint64_t _a = indexof(u);
+            uint64_t _b = indexof(u->oper1);
+
+            this->operator()(u->oper1);
+
+            clause.emplace_back(CMSat::Lit(_a, true));
+            clause.emplace_back(CMSat::Lit(_b, true));
+//        _os.add_clause(clause);
+            _os.emplace_back(clause);
+            clause.clear();
+
+            clause.emplace_back(CMSat::Lit(_a, false));
+            clause.emplace_back(CMSat::Lit(_b, false));
+//        _os.add_clause(clause);
+            _os.emplace_back(clause);
+            clause.clear();
+        }
+    };
+
+
+    expr_t operator&&(const expr_t &a, const expr_t &b) {
+        assert(a.get() != nullptr);
+        assert(b.get() != nullptr);
+        return expr_t(new expr_s(a, b, expr_type_e::_op_and));
     }
 
-    void operator_and(expr_t& b) const {
-        std::vector<CMSat::Lit> clause;
-
-        uint64_t _a = indexof(b);
-        uint64_t _b = indexof(b->oper1);
-        uint64_t _c = indexof(b->oper2);
-
-        this->operator()(b->oper1);
-        this->operator()(b->oper2);
-
-
-        clause.emplace_back(CMSat::Lit(_a, true));
-        clause.emplace_back(CMSat::Lit(_b, false));
-//        _os.add_clause(clause);
-        _os.emplace_back(clause);
-        clause.clear();
-
-        clause.emplace_back(CMSat::Lit(_a, true));
-        clause.emplace_back(CMSat::Lit(_c, false));
-//        _os.add_clause(clause);
-        _os.emplace_back(clause);
-        clause.clear();
-
-        clause.emplace_back(CMSat::Lit(_a, false));
-        clause.emplace_back(CMSat::Lit(_b, true));
-        clause.emplace_back(CMSat::Lit(_c, true));
-//        _os.add_clause(clause);
-        _os.emplace_back(clause);
-        clause.clear();
-    }
-    void operator_or(expr_t& b) const {
-        std::vector<CMSat::Lit> clause;
-        uint64_t _a = indexof(b);
-        uint64_t _b = indexof(b->oper1);
-        uint64_t _c = indexof(b->oper2);
-
-        this->operator()(b->oper1);
-        this->operator()(b->oper2);
-
-
-        clause.emplace_back(CMSat::Lit(_a, false));
-        clause.emplace_back(CMSat::Lit(_b, true));
-//        _os.add_clause(clause);
-        _os.emplace_back(clause);
-        clause.clear();
-
-        clause.emplace_back(CMSat::Lit(_a, false));
-        clause.emplace_back(CMSat::Lit(_c, true));
-//        _os.add_clause(clause);
-        _os.emplace_back(clause);
-        clause.clear();
-
-        clause.emplace_back(CMSat::Lit(_a, true));
-        clause.emplace_back(CMSat::Lit(_b, false));
-        clause.emplace_back(CMSat::Lit(_c, false));
-//        _os.add_clause(clause);
-        _os.emplace_back(clause);
-        clause.clear();
+    expr_t operator||(const expr_t &a, const expr_t &b) {
+        assert(a.get() != nullptr);
+        assert(b.get() != nullptr);
+        return expr_t(new expr_s(a, b, expr_type_e::_op_or));
     }
 
-    void operator_not(expr_t& u) const
-    {
-        std::vector<CMSat::Lit> clause;
-
-        uint64_t _a = indexof(u);
-        uint64_t _b = indexof(u->oper1);
-
-        this->operator()(u->oper1);
-
-        clause.emplace_back(CMSat::Lit(_a, true));
-        clause.emplace_back(CMSat::Lit(_b, true));
-//        _os.add_clause(clause);
-        _os.emplace_back(clause);
-        clause.clear();
-
-        clause.emplace_back(CMSat::Lit(_a, false));
-        clause.emplace_back(CMSat::Lit(_b, false));
-//        _os.add_clause(clause);
-        _os.emplace_back(clause);
-        clause.clear();
+    expr_t operator!(const expr_t &a) {
+        assert(a.get() != nullptr);
+        return expr_t(new expr_s(a, expr_type_e::_op_not));
     }
-};
+
+    expr_t operator>>(const expr_t &a, const expr_t &b) {
+        assert(a.get() != nullptr);
+        assert(b.get() != nullptr);
+        return !a || b;
+    }
+
+    expr_t operator*(const expr_t &a, const expr_t &b) {
+        assert(a.get() != nullptr);
+        assert(b.get() != nullptr);
+        return (a >> b) && (b >> a);
+    }
 
 
-
-expr_t operator&&(const expr_t& a, const expr_t& b) {
-    assert(a.get() != nullptr);
-    assert(b.get() != nullptr);
-    return expr_t(new expr_s(a, b, expr_type_e::_op_and));
 }
-
-expr_t operator||(const expr_t& a, const expr_t& b) {
-    assert(a.get() != nullptr);
-    assert(b.get() != nullptr);
-    return expr_t(new expr_s(a, b, expr_type_e::_op_or));
-}
-
-expr_t operator!(const expr_t& a) {
-    assert(a.get() != nullptr);
-    return expr_t(new expr_s(a, expr_type_e::_op_not));
-}
-
-expr_t operator>>(const expr_t& a,const expr_t& b) {
-    assert(a.get() != nullptr);
-    assert(b.get() != nullptr);
-    return !a || b;
-}
-
-expr_t operator*(const expr_t& a,const expr_t& b) {
-    assert(a.get() != nullptr);
-    assert(b.get() != nullptr);
-    return (a >> b) && (b >> a);
-}
-
-
-
 
 
 

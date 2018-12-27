@@ -126,23 +126,23 @@ solver_t Solg_solver::dv3dt(const solver_t voltage[], const solver_t mem_state[]
 }
 
 void Solg_solver::voltage_update(solver_t voltage[]) {
-//    solver_t f = (gate == gate_t ::_and ? (solver_t )1. : (solver_t )-1.);
+//    solver_t f = (gate2 == gate_t ::_and ? (solver_t )1. : (solver_t )-1.);
     solver_t f = 1;
-#ifdef V1
-    f = voltage[(int)voltage_t::v1];
-#endif
-#ifdef V2
-    f = voltage[(int)voltage_t::v2];
-#endif
-#ifdef V3
-    f = voltage[(int)voltage_t::v3];
-#endif
-    voltage[(int)voltage_t::V1_M] =  0 * voltage[(int)voltage_t::v1] - 1 * voltage[(int)voltage_t::v2] + 1 * voltage[(int)voltage_t::v3] + 1 * f;
-    voltage[(int)voltage_t::V1_R] =  3 * voltage[(int)voltage_t::v1] + 1 * voltage[(int)voltage_t::v2] - 2 * voltage[(int)voltage_t::v3] - 1 * f;
-    voltage[(int)voltage_t::V2_M] = -1 * voltage[(int)voltage_t::v1] + 0 * voltage[(int)voltage_t::v2] + 1 * voltage[(int)voltage_t::v3] + 1 * f;
-    voltage[(int)voltage_t::V2_R] =  1 * voltage[(int)voltage_t::v1] + 3 * voltage[(int)voltage_t::v2] - 2 * voltage[(int)voltage_t::v3] - 1 * f;
-    voltage[(int)voltage_t::V3_M] =  2 * voltage[(int)voltage_t::v1] + 2 * voltage[(int)voltage_t::v2] - 1 * voltage[(int)voltage_t::v3] - 2 * f;
-    voltage[(int)voltage_t::V3_R] = -3 * voltage[(int)voltage_t::v1] - 3 * voltage[(int)voltage_t::v2] + 5 * voltage[(int)voltage_t::v3] + 2 * f;
+//#ifdef V1
+//    f = voltage[(int)voltage_t::v1];
+//#endif
+//#ifdef V2
+//    f = voltage[(int)voltage_t::v2];
+//#endif
+//#ifdef V3
+//    f = voltage[(int)voltage_t::v3] > 0 ? 1 : -1;
+//#endif
+    voltage[(int)voltage_t::V1_M] =  0 * voltage[(int)voltage_t::v1] - 1 * voltage[(int)voltage_t::v2] + 2 * voltage[(int)voltage_t::v3];// + 1 * f;
+    voltage[(int)voltage_t::V1_R] =  3 * voltage[(int)voltage_t::v1] + 1 * voltage[(int)voltage_t::v2] - 3 * voltage[(int)voltage_t::v3];// - 1 * f;
+    voltage[(int)voltage_t::V2_M] = -1 * voltage[(int)voltage_t::v1] + 0 * voltage[(int)voltage_t::v2] + 2 * voltage[(int)voltage_t::v3];// + 1 * f;
+    voltage[(int)voltage_t::V2_R] =  1 * voltage[(int)voltage_t::v1] + 3 * voltage[(int)voltage_t::v2] - 3 * voltage[(int)voltage_t::v3];// - 1 * f;
+    voltage[(int)voltage_t::V3_M] =  2 * voltage[(int)voltage_t::v1] + 2 * voltage[(int)voltage_t::v2] - 1 * voltage[(int)voltage_t::v3];// - 2 * f;
+    voltage[(int)voltage_t::V3_R] = -3 * voltage[(int)voltage_t::v1] - 3 * voltage[(int)voltage_t::v2] + 5 * voltage[(int)voltage_t::v3];// + 2 * f;
 }
 
 void Solg_solver::rk4() {
@@ -158,15 +158,21 @@ void Solg_solver::rk4() {
     std::fill(voltage, &voltage[(int)voltage_t ::SIZE], 0);
     solver_t step = 1e-7;
 
-    voltage[(int)voltage_t::v1] = 1.;
-    voltage[(int)voltage_t::v2] = .0;
+    voltage[(int)voltage_t::v1] = -1.;
+    voltage[(int)voltage_t::v2] = 1.0;
     voltage[(int)voltage_t::v3] = -1.0;
 //    mem_state[(int)memristor_t::x3] = .75;
     std::ofstream v1_out("/tmp/v1.txt");
     std::ofstream v2_out("/tmp/v2.txt");
     std::ofstream v3_out("/tmp/v3.txt");
 
-    for(solver_t t = 0; t < .001; t+=step) {
+    std::ofstream g_x1_out("/tmp/x1.txt");
+    std::ofstream g_x2_out("/tmp/x2.txt");
+    std::ofstream g_x3_out("/tmp/x3.txt");
+    std::ofstream g_x4_out("/tmp/x4.txt");
+    std::ofstream g_x5_out("/tmp/x5.txt");
+
+    for(solver_t t = 0; t < .008; t+=step) {
         voltage_update(voltage);
         solver_t mem_state_new_k1[(int)memristor_t::SIZE] = {0,};
         solver_t mem_state_step[(int)memristor_t::SIZE] = {0,};
@@ -319,6 +325,12 @@ void Solg_solver::rk4() {
         v2_out << t << "\t" << voltage[(int)voltage_t::v2] << std::endl;
         v3_out << t << "\t" << voltage[(int)voltage_t::v3] << std::endl;
 
+        g_x1_out << t << "\t" << mem_state[(int)memristor_t::x1] << std::endl;
+        g_x2_out << t << "\t" << mem_state[(int)memristor_t::x2] << std::endl;
+        g_x3_out << t << "\t" << mem_state[(int)memristor_t::x3] << std::endl;
+        g_x4_out << t << "\t" << mem_state[(int)memristor_t::x4] << std::endl;
+        g_x5_out << t << "\t" << mem_state[(int)memristor_t::x5] << std::endl;
+
     }
 
     std::cout << "V1_M\t" << voltage[(int)voltage_t::V1_M] << std::endl;
@@ -327,4 +339,33 @@ void Solg_solver::rk4() {
     std::cout << "V2_R\t" << voltage[(int)voltage_t::V2_R] << std::endl;
     std::cout << "V3_M\t" << voltage[(int)voltage_t::V3_M] << std::endl;
     std::cout << "V3_R\t" << voltage[(int)voltage_t::V3_R] << std::endl;
+
+
+    std::cout << "v_mem 1\t" << v(memristor_t::x1, voltage) << std::endl;
+    std::cout << "v_mem 2\t" << v(memristor_t::x2, voltage) << std::endl;
+    std::cout << "v_mem 3\t" << v(memristor_t::x3, voltage) << std::endl;
+    std::cout << "v_mem 4\t" << v(memristor_t::x4, voltage) << std::endl;
+    std::cout << "v_mem 5\t" << v(memristor_t::x5, voltage) << std::endl;
+
+    std::cout << "v1\t" << voltage[(int)voltage_t::v1] << std::endl;
+    std::cout << "v2\t" << voltage[(int)voltage_t::v2] << std::endl;
+    std::cout << "v3\t" << voltage[(int)voltage_t::v3] << std::endl;
+
+    std::cout << "g_x1\t" << g(mem_state[(int)memristor_t::x1]) << std::endl;
+    std::cout << "g_x2\t" << g(mem_state[(int)memristor_t::x2]) << std::endl;
+    std::cout << "g_x3\t" << g(mem_state[(int)memristor_t::x3]) << std::endl;
+    std::cout << "g_x4\t" << g(mem_state[(int)memristor_t::x4]) << std::endl;
+    std::cout << "g_x5\t" << g(mem_state[(int)memristor_t::x5]) << std::endl;
+
+    std::cout << "i1\t" << v(memristor_t ::x1, voltage)*g(mem_state[(int)memristor_t::x1]) << std::endl;
+    std::cout << "i2\t" << v(memristor_t ::x2, voltage)*g(mem_state[(int)memristor_t::x2]) << std::endl;
+    std::cout << "i3\t" << v(memristor_t ::x3, voltage)*g(mem_state[(int)memristor_t::x3]) << std::endl;
+    std::cout << "i4\t" << v(memristor_t ::x4, voltage)*g(mem_state[(int)memristor_t::x4]) << std::endl;
+    std::cout << "i5\t" << v(memristor_t ::x5, voltage)*g(mem_state[(int)memristor_t::x5]) << std::endl;
+
+
+
+
+
+
 }
