@@ -54,12 +54,12 @@ lbool find(uint64_t num_pages) {
     std::vector<std::pair<int ,int >> E;
 
     srand(3);
-    int V_count = 200;
+    int V_count = 150;
     for(int i = 0; i < V_count; i++) {
         V.emplace_back(i);
     }
-    int pairs = 300;
-    int max_pins = 100;
+    int pairs = 150;
+    int max_pins = 5;
     for(int i = 0; i < pairs; i++) {
         auto r1 = rand() % V_count;
         auto pins = rand() % max_pins;
@@ -261,7 +261,7 @@ lbool find(uint64_t num_pages) {
     solver.set_verbosity(0);
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    lbool ret = l_False;//solver.solve();
+    lbool ret = solver.solve();
     clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 
     uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
@@ -332,8 +332,8 @@ lbool find(uint64_t num_pages) {
 
     std::cout << "Creating circuit" << std::endl;
     solg::circuit::Circuit circ(linear, clauses);
-    std::cout << "Circuit nodes " << circ.nodes.size() << std::endl;
-    std::cout << "Circuit edges " << circ.edges.size() << std::endl;
+//    std::cout << "Circuit nodes " << circ.nodes.size() << std::endl;
+//    std::cout << "Circuit edges " << circ.edges.size() << std::endl;
     std::cout << "Solving circuit" << std::endl;
 
 
