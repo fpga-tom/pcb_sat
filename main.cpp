@@ -20,7 +20,7 @@ typedef std::map<uint64_t , std::map<uint64_t , expr_t>> mat_t;
 lbool find(uint64_t num_pages);
 
 int main(int argc, char** argv) {
-    for (uint64_t np = 1; np < 15; np++) {
+    for (uint64_t np = 3; np < 15; np++) {
         lbool ret = find(np);
         std::cout << np << " " << ret << std::endl;
         if (ret == l_True) {
@@ -54,12 +54,12 @@ lbool find(uint64_t num_pages) {
     std::vector<std::pair<int ,int >> E;
 
     srand(3);
-    int V_count = 150;
+    int V_count = 40;
     for(int i = 0; i < V_count; i++) {
         V.emplace_back(i);
     }
-    int pairs = 150;
-    int max_pins = 5;
+    int pairs = 200;
+    int max_pins = 10;
     for(int i = 0; i < pairs; i++) {
         auto r1 = rand() % V_count;
         auto pins = rand() % max_pins;
@@ -261,7 +261,7 @@ lbool find(uint64_t num_pages) {
     solver.set_verbosity(0);
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    lbool ret = solver.solve();
+    lbool ret = l_False;//solver.solve();
     clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 
     uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;

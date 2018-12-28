@@ -52,13 +52,13 @@ namespace solg {
 
         typedef std::variant<solg::gate2::Gate, solg::gate3::Gate> gate_t;
 
-        typedef Eigen::SparseMatrix<solg_t, Eigen::RowMajor > SpMat;
+        typedef Eigen::SparseMatrix<solg_t, Eigen::ColMajor > SpMat;
         typedef Eigen::VectorXd Vec;
         typedef Eigen::Triplet<solg_t > T;
 
         struct Circuit {
 
-            std::vector<std::shared_ptr<gate_t>> gates;
+            std::vector<std::unique_ptr<gate_t>> gates;
             std::map<std::pair<uint64_t , uint64_t >, uint64_t > terminal_id;
 
             SpMat I_mat;
@@ -74,7 +74,7 @@ namespace solg {
 //                std::map<node_t, std::vector<std::pair<std::shared_ptr<gate_t>, uint64_t >>> terminals;
 //                std::map<std::pair<std::shared_ptr<gate_t>, uint64_t>, node_t> terminals_reverse;
 
-                std::map<uint64_t , std::vector<uint64_t> > terminal_map;
+                std::map<uint64_t , std::vector<std::pair<uint64_t, bool>> > terminal_map;
 
 
                 uint64_t terminal_count = 0;
@@ -89,6 +89,7 @@ namespace solg {
                     }
                 }
                 I_mat = SpMat(terminal_count, terminal_count);
+//                I_mat.reserve(Eigen::VectorXi::Constant(terminal_count, 10));
                 I_vec = Vec(terminal_count);
 //                for (auto it = literal_node.begin(); it != literal_node.end(); ++it) {
 //                    CMSat::Lit a = it->first;
@@ -105,8 +106,7 @@ namespace solg {
                 terminal_count = 0;
                 for (const std::vector<CMSat::Lit> &clause : clauses) {
                     if (clause.size() == 2) {
-                        std::shared_ptr<gate_t> g(new gate_t(solg::gate2::Gate(solg::gate2::logic::_or)));
-                        gates.emplace_back(g);
+                        std::unique_ptr<gate_t> g(new gate_t(solg::gate2::Gate(solg::gate2::logic::_or)));
                         for (uint64_t i = 0; i < clause.size(); i++) {
                             const CMSat::Lit &lit = clause[i];
 //                            node_t v1 = literal_node[lit];
@@ -118,17 +118,17 @@ namespace solg {
 //                            if (terminals_reverse.count(std::make_pair(g, i)) == 0) {
 //                                terminals_reverse.insert(std::make_pair(std::make_pair(g, i), v1));
 //                            }
-                            auto p = std::make_pair((uint64_t )g.get(), i);
+                            std::pair<uint64_t ,uint64_t > p((uint64_t )g.get(), i);
                             terminal_id.insert(std::make_pair(p, terminal_count++));
-                            if(terminal_map.count(lit.toInt()) == 0) {
-                                terminal_map.insert(std::make_pair(lit.var(), std::vector<uint64_t>()));
+                            if(terminal_map.count(lit.var()) == 0) {
+                                terminal_map.insert(std::make_pair(lit.var(), std::vector<std::pair<uint64_t, bool>>()));
                             }
-                            terminal_map[lit.var()].emplace_back(terminal_id[p]);
+                            terminal_map[lit.var()].emplace_back(std::make_pair(terminal_id[p], lit.sign()));
 
                         }
+                        gates.emplace_back(std::move(g));
                     } else if (clause.size() == 3) {
-                        std::shared_ptr<gate_t> g(new gate_t(solg::gate3::Gate(solg::gate3::logic::_or)));
-                        gates.emplace_back(g);
+                        std::unique_ptr<gate_t> g(new gate_t(solg::gate3::Gate(solg::gate3::logic::_or)));
                         for (uint64_t i = 0; i < clause.size(); i++) {
                             const CMSat::Lit &lit = clause[i];
 //                            node_t v1 = literal_node[lit];
@@ -140,29 +140,46 @@ namespace solg {
 //                            if (terminals_reverse.count(std::make_pair(g, i)) == 0) {
 //                                terminals_reverse.insert(std::make_pair(std::make_pair(g, i), v1));
 //                              }
-                            auto p = std::make_pair((uint64_t )g.get(), i);
+                            std::pair<uint64_t ,uint64_t > p((uint64_t )g.get(), i);
                             terminal_id.insert(std::make_pair(p, terminal_count++));
-                            if(terminal_map.count(lit.toInt()) == 0) {
-                                terminal_map.insert(std::make_pair(lit.var(), std::vector<uint64_t>()));
+                            if(terminal_map.count(lit.var()) == 0) {
+                                terminal_map.insert(std::make_pair(lit.var(), std::vector<std::pair<uint64_t, bool>>()));
                             }
-                            terminal_map[lit.var()].emplace_back(terminal_id[p]);
+                            terminal_map[lit.var()].emplace_back(std::make_pair(terminal_id[p], lit.sign()));
                         }
+
+                        gates.emplace_back(std::move(g));
                     }
                 }
 
                 std::vector<T> triplets;
+                for(auto it = terminal_map.begin(); it != terminal_map.end(); ++it) {
+                    for(const std::pair<uint64_t, bool>& t : it->second) {
+                        triplets.emplace_back(T(it->first, t.first, t.second ? -1 : 1));
+                    }
+                }
+
+                /*
                 for (int j = 0; j < gates.size(); j++) {
                     const std::shared_ptr<gate_t> &g = gates[j];
                     const std::vector<CMSat::Lit> &clause = clauses[j];
                     for (uint64_t i = 0; i < clause.size(); i++) {
                         const CMSat::Lit &lit = clause[i];
                         uint64_t tid = terminal_id[std::make_pair((uint64_t )g.get(), i)];
+//                        std::cout << terminal_map[lit.var()].size() << std::endl;
                         for(const uint64_t t : terminal_map[lit.var()]) {
-                            triplets.emplace_back(T(tid, t, lit.sign() ? -1 : 1));
+                            if(tid == t) continue;
+//                            I_mat.insert(t, tid) = lit.sign() ? -1 : 1;
+                            triplets.emplace_back(T(t, tid, lit.sign() ? -1 : 1));
                         }
                     }
                 }
+                 */
+
+
                 I_mat.setFromTriplets(triplets.begin(), triplets.end());
+                I_mat.makeCompressed();
+                std::cout << "Creating triplets done " << I_mat.nonZeros() << "/" << triplets.size() << "/" << terminal_count << "/" << (terminal_count*terminal_count) << std::endl;
 
 
 //                for (int j = 0; j < gates.size(); j++) {
@@ -253,7 +270,7 @@ namespace solg {
 #pragma omp parallel
 #pragma omp for
                     for(int j = 0; j < gates.size(); j++) {
-                        const std::shared_ptr<gate_t> &g = gates[j];
+                        const std::unique_ptr<gate_t> &g = gates[j];
 
                         solg_t i1 = 0;
                         solg_t i2 = 0;
@@ -261,15 +278,15 @@ namespace solg {
 
                         auto g1 = std::make_pair((uint64_t )g.get(), 0);
                         if(terminal_id.count(g1) > 0) {
-                            i1 = I_vec_new[terminal_id[g1]];
+                            i1 = I_vec_new[terminal_id[g1]] - I_vec[terminal_id[g1]];
                         }
                         auto g2 = std::make_pair((uint64_t )g.get(), 1);
                         if(terminal_id.count(g2) > 0) {
-                            i2 = I_vec_new[terminal_id[g2]];
+                            i2 = I_vec_new[terminal_id[g2]] - I_vec[terminal_id[g2]];
                         }
                         auto g3 = std::make_pair((uint64_t )g.get(), 2);
                         if(terminal_id.count(g3) > 0) {
-                            i3 = I_vec_new[terminal_id[g3]];
+                            i3 = I_vec_new[terminal_id[g3]] - I_vec[terminal_id[g3]];
                         }
 
                         std::visit(rk4_gate_visitor(i1, i2, i3), *g);
@@ -279,14 +296,14 @@ namespace solg {
 #pragma omp parallel
 #pragma omp for
                     for(int j = 0; j < gates.size(); j++) {
-                        const std::shared_ptr<gate_t> &g = gates[j];
+                        const std::unique_ptr<gate_t> &g = gates[j];
                         std::visit(current_gate_visitor(), *g);
                     }
 
 #pragma omp parallel
 #pragma omp for
                     for(int j = 0; j < gates.size(); j++) {
-                        const std::shared_ptr<gate_t> &g = gates[j];
+                        const std::unique_ptr<gate_t> &g = gates[j];
 
                         auto g1 = std::make_pair((uint64_t )g.get(), 0);
                         if(terminal_id.count(g1) > 0) {
