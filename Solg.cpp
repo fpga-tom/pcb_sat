@@ -147,6 +147,18 @@ void solg::gate2::Gate::voltage_update(const gate2::state_t& s1, gate2::state_t&
 
 void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
 
+    state_t k1, k2, k3, k4, k1_step, k2_step, k3_step, k4_step;
+
+    memset(&k1, 0, sizeof(k1));
+    memset(&k2, 0, sizeof(k2));
+    memset(&k3, 0, sizeof(k3));
+    memset(&k4, 0, sizeof(k4));
+
+    memset(&k1_step, 0, sizeof(k1_step));
+    memset(&k2_step, 0, sizeof(k2_step));
+    memset(&k3_step, 0, sizeof(k3_step));
+    memset(&k4_step, 0, sizeof(k4_step));
+
     state_prev = state;
     state.term_state[(int)terminal::i1] = i1;
     state.term_state[(int)terminal::i2] = i2;
@@ -183,12 +195,10 @@ void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
 #ifndef V3
     k1_step.term_state[(int)terminal ::v3] = k1.term_state[(int)terminal ::v3] / 2 + state.term_state[(int)terminal ::v3];
 #endif
-}
+//}
+//
+//void solg::gate2::Gate::rk4_2() {
 
-void solg::gate2::Gate::rk4_2() {
-
-//    k1_step.term_state[(int)terminal::i1] += i1;
-//    k1_step.term_state[(int)terminal::i2] += i2;
     voltage_update(k1_step, k1_step);
     // rk4 step k2
     for (int i = 0; i < (int) memristor::SIZE; i++) {
@@ -221,12 +231,10 @@ void solg::gate2::Gate::rk4_2() {
 #ifndef V3
     k2_step.term_state[(int)terminal ::v3] = k2.term_state[(int)terminal ::v3] / 2 + state.term_state[(int)terminal ::v3];
 #endif
-}
-
-void solg::gate2::Gate::rk4_3() {
+//}
+//
+//void solg::gate2::Gate::rk4_3() {
     // rk4 step k3
-//    k2_step.term_state[(int)terminal::i1] += i1;
-//    k2_step.term_state[(int)terminal::i2] += i2;
     voltage_update(k2_step, k2_step);
     // rk4 step k2
     for (int i = 0; i < (int) memristor::SIZE; i++) {
@@ -260,13 +268,11 @@ void solg::gate2::Gate::rk4_3() {
     k3_step.term_state[(int)terminal ::v3] = k3.term_state[(int)terminal ::v3] + state.term_state[(int)terminal ::v3];
 #endif
 
-}
-
-void solg::gate2::Gate::rk4_4() {
+//}
+//
+//void solg::gate2::Gate::rk4_4() {
         // rk4 step k4
 
-//    k3_step.term_state[(int)terminal::i1] += i1;
-//    k3_step.term_state[(int)terminal::i2] += i2;
     voltage_update(k3_step, k3_step);
 
     for (int i = 0; i < (int) memristor::SIZE; i++) {
@@ -453,6 +459,17 @@ namespace solg::gate3 {
 
 
     void solg::gate3::Gate::rk4_1(const solg_t i1, const solg_t i2, const solg_t i3) {
+        state_t k1, k2, k3, k4, k1_step, k2_step, k3_step, k4_step;
+
+        memset(&k1, 0, sizeof(k1));
+        memset(&k2, 0, sizeof(k2));
+        memset(&k3, 0, sizeof(k3));
+        memset(&k4, 0, sizeof(k4));
+
+        memset(&k1_step, 0, sizeof(k1_step));
+        memset(&k2_step, 0, sizeof(k2_step));
+        memset(&k3_step, 0, sizeof(k3_step));
+        memset(&k4_step, 0, sizeof(k4_step));
 
         state_prev = state;
         state.term_state[(int)terminal::i1] = i1;
@@ -480,12 +497,10 @@ namespace solg::gate3 {
         k1_step.term_state[(int) terminal::v2] =
                 k1.term_state[(int) terminal::v2] / 2 + state.term_state[(int) terminal::v2];
         k1_step.term_state[(int)terminal ::v3] = k1.term_state[(int)terminal ::v3] / 2 + state.term_state[(int)terminal ::v3];
-    }
+//    }
+//
+//    void solg::gate3::Gate::rk4_2() {
 
-    void solg::gate3::Gate::rk4_2() {
-
-//    k1_step.term_state[(int)terminal::i1] += i1;
-//    k1_step.term_state[(int)terminal::i2] += i2;
         voltage_update(k1_step, k1_step);
         // rk4 step k2
         for (int i = 0; i < (int) memristor::SIZE; i++) {
@@ -507,12 +522,10 @@ namespace solg::gate3 {
         k2_step.term_state[(int) terminal::v2] =
                 k2.term_state[(int) terminal::v2] / 2 + state.term_state[(int) terminal::v2];
         k2_step.term_state[(int)terminal ::v3] = k2.term_state[(int)terminal ::v3] / 2 + state.term_state[(int)terminal ::v3];
-    }
-
-    void solg::gate3::Gate::rk4_3() {
+//    }
+//
+//    void solg::gate3::Gate::rk4_3() {
         // rk4 step k3
-//    k2_step.term_state[(int)terminal::i1] += i1;
-//    k2_step.term_state[(int)terminal::i2] += i2;
         voltage_update(k2_step, k2_step);
         // rk4 step k2
         for (int i = 0; i < (int) memristor::SIZE; i++) {
@@ -535,13 +548,11 @@ namespace solg::gate3 {
                 k3.term_state[(int) terminal::v2] + state.term_state[(int) terminal::v2];
         k3_step.term_state[(int)terminal ::v3] = k3.term_state[(int)terminal ::v3] + state.term_state[(int)terminal ::v3];
 
-    }
-
-    void solg::gate3::Gate::rk4_4() {
+//    }
+//
+//    void solg::gate3::Gate::rk4_4() {
         // rk4 step k4
 
-//    k3_step.term_state[(int)terminal::i1] += i1;
-//    k3_step.term_state[(int)terminal::i2] += i2;
         voltage_update(k3_step, k3_step);
 
         for (int i = 0; i < (int) memristor::SIZE; i++) {

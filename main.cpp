@@ -1,6 +1,6 @@
+#include "Dynamic.h"
 #include <iostream>
 #include <cryptominisat5/cryptominisat.h>
-#include <boost/algorithm/string.hpp>
 #include <assert.h>
 #include <vector>
 #include <map>
@@ -9,11 +9,12 @@
 #include "Expression.h"
 #include "Solg_solver.h"
 #include "Circuit.h"
+#include <boost/algorithm/string.hpp>
 
 using std::vector;
 using namespace CMSat;
 
-using namespace expression;
+using namespace expression::boolean;
 
 typedef std::map<uint64_t , std::map<uint64_t , expr_t>> mat_t;
 
@@ -54,12 +55,12 @@ lbool find(uint64_t num_pages) {
     std::vector<std::pair<int ,int >> E;
 
     srand(3);
-    int V_count = 40;
+    int V_count = 230;
     for(int i = 0; i < V_count; i++) {
         V.emplace_back(i);
     }
-    int pairs = 200;
-    int max_pins = 10;
+    int pairs = 340;
+    int max_pins = 15;
     for(int i = 0; i < pairs; i++) {
         auto r1 = rand() % V_count;
         auto pins = rand() % max_pins;
@@ -344,6 +345,10 @@ lbool find(uint64_t num_pages) {
     delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
     std::cout << "Solving done " << (delta_us/1e6) << std::endl;
 
+
+//    Dynamic d(7, 1, 1050);
+//    for(int i = 0; i < 25000; i++)
+//        d.step(i);
 
     return ret;
 }

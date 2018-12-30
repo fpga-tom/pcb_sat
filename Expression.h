@@ -14,220 +14,201 @@
 #include <cryptominisat5/cryptominisat.h>
 #include <map>
 #include <numeric>
+#include <cmath>
 
 namespace expression {
 
-    struct expr_s;
-    typedef std::shared_ptr<expr_s> expr_t;
-    enum class expr_type_e {
-        _var, _op_not, _op_and, _op_or
-    };
+    namespace boolean {
 
-    struct expr_s {
+        struct expr_s;
+        typedef std::shared_ptr<expr_s> expr_t;
+        enum class expr_type_e {
+            _var, _op_not, _op_and, _op_or
+        };
 
-        expr_s(const expr_t oper1, expr_type_e type) : oper1(oper1), type(type) {}
+        struct expr_s {
 
-        explicit expr_s(const std::string &var) : var(var), type(expr_type_e::_var) {}
+            expr_s(const expr_t oper1, expr_type_e type);
 
-        expr_s(const expr_t oper1, const expr_t oper2, expr_type_e type) : oper1(oper1), oper2(oper2), type(type) {}
+            explicit expr_s(const std::string &var);
 
-        expr_t oper1;
-        expr_t oper2;
-        const std::string var;
-        expr_type_e type;
+            expr_s(const expr_t oper1, const expr_t oper2, expr_type_e type);
 
-    };
+            expr_t oper1;
+            expr_t oper2;
+            const std::string var;
+            expr_type_e type;
 
-    struct linearize {
-        linearize(std::vector<uint64_t> &os) : _os(os) {}
+        };
 
-        std::vector<uint64_t> &_os;
 
-        void operator()(expr_t &ex) const {
-            if (ex->type == expr_type_e::_var) {
-                operator_var(ex);
-            } else if (ex->type == expr_type_e::_op_and) {
-                operator_and(ex);
-            } else if (ex->type == expr_type_e::_op_or) {
-                operator_or(ex);
-            } else if (ex->type == expr_type_e::_op_not) {
-                operator_not(ex);
-            }
-        }
+        struct linearize {
+            linearize(std::vector<uint64_t> &os) : _os(os) {}
 
-        void operator_var(expr_t &v) const { _os.emplace_back((uint64_t) v.get()); }
+            std::vector<uint64_t> &_os;
 
-        void operator_and(expr_t &b) const {
-            _os.emplace_back((uint64_t) b.get());
-            this->operator()(b->oper1);
-            this->operator()(b->oper2);
-        }
+            void operator()(expr_t &ex) const;
 
-        void operator_or(expr_t &b) const {
-            _os.emplace_back((uint64_t) b.get());
-            this->operator()(b->oper1);
-            this->operator()(b->oper2);
-        }
+            void operator_var(expr_t &v) const;
 
-        void operator_not(expr_t &u) const {
-            _os.emplace_back((uint64_t) u.get());
-            this->operator()(u->oper1);
-        }
-    };
+            void operator_and(expr_t &b) const;
 
-    struct tseitin {
-        std::vector<uint64_t> &_lz;
-        std::map<uint64_t, uint64_t> _index;
-        std::map<uint64_t, uint64_t> _index_reverse;
-        std::vector<std::vector<CMSat::Lit>> &_os;
+            void operator_or(expr_t &b) const;
+
+            void operator_not(expr_t &u) const;
+        };
+
+        struct tseitin {
+            std::vector<uint64_t> &_lz;
+            std::map<uint64_t, uint64_t> _index;
+            std::map<uint64_t, uint64_t> _index_reverse;
+            std::vector<std::vector<CMSat::Lit>> &_os;
 //    CMSat::SATSolver& _os;
 
-        tseitin(std::vector<std::vector<CMSat::Lit>> &os, std::vector<uint64_t> &lz) : _os(os), _lz(lz) {
-//        _os.new_vars(lz.size());
-            for (int i = 0; i < lz.size(); ++i) {
-                _index.insert(std::make_pair(lz[i], i));
-                _index_reverse.insert(std::make_pair(i, lz[i]));
-            }
-
-        }
+            tseitin(std::vector<std::vector<CMSat::Lit>> &os, std::vector<uint64_t> &lz);
 
 
-        uint64_t indexof(const expr_t &ex) const {
-            return _index.at((uint64_t) ex.get());
-        }
+            uint64_t indexof(const expr_t &ex) const;
 
-        expr_t indexof(const uint64_t node) const {
-            return expr_t(*((expr_t *) _index_reverse.at(node)));
-        }
+            expr_t indexof(const uint64_t node) const;
 
-        void operator_var(expr_t &v) const {}
+            void operator_var(expr_t &v) const;
 
-        void operator()(expr_t &ex) const {
-            if (ex->type == expr_type_e::_var) {
-                operator_var(ex);
-            } else if (ex->type == expr_type_e::_op_and) {
-                operator_and(ex);
-            } else if (ex->type == expr_type_e::_op_or) {
-                operator_or(ex);
-            } else if (ex->type == expr_type_e::_op_not) {
-                operator_not(ex);
-            }
-        }
+            void operator()(expr_t &ex) const;
 
-        void operator_and(expr_t &b) const {
-            std::vector<CMSat::Lit> clause;
+            void operator_and(expr_t &b) const;
 
-            uint64_t _a = indexof(b);
-            uint64_t _b = indexof(b->oper1);
-            uint64_t _c = indexof(b->oper2);
+            void operator_or(expr_t &b) const;
 
-            this->operator()(b->oper1);
-            this->operator()(b->oper2);
+            void operator_not(expr_t &u) const;
+        };
 
 
-            clause.emplace_back(CMSat::Lit(_a, true));
-            clause.emplace_back(CMSat::Lit(_b, false));
-//        _os.add_clause(clause);
-            _os.emplace_back(clause);
-            clause.clear();
+        expr_t operator&&(const expr_t &a, const expr_t &b);
 
-            clause.emplace_back(CMSat::Lit(_a, true));
-            clause.emplace_back(CMSat::Lit(_c, false));
-//        _os.add_clause(clause);
-            _os.emplace_back(clause);
-            clause.clear();
+        expr_t operator||(const expr_t &a, const expr_t &b);
 
-            clause.emplace_back(CMSat::Lit(_a, false));
-            clause.emplace_back(CMSat::Lit(_b, true));
-            clause.emplace_back(CMSat::Lit(_c, true));
-//        _os.add_clause(clause);
-            _os.emplace_back(clause);
-            clause.clear();
-        }
+        expr_t operator!(const expr_t &a);
 
-        void operator_or(expr_t &b) const {
-            std::vector<CMSat::Lit> clause;
-            uint64_t _a = indexof(b);
-            uint64_t _b = indexof(b->oper1);
-            uint64_t _c = indexof(b->oper2);
+        expr_t operator>>(const expr_t &a, const expr_t &b);
 
-            this->operator()(b->oper1);
-            this->operator()(b->oper2);
-
-
-            clause.emplace_back(CMSat::Lit(_a, false));
-            clause.emplace_back(CMSat::Lit(_b, true));
-//        _os.add_clause(clause);
-            _os.emplace_back(clause);
-            clause.clear();
-
-            clause.emplace_back(CMSat::Lit(_a, false));
-            clause.emplace_back(CMSat::Lit(_c, true));
-//        _os.add_clause(clause);
-            _os.emplace_back(clause);
-            clause.clear();
-
-            clause.emplace_back(CMSat::Lit(_a, true));
-            clause.emplace_back(CMSat::Lit(_b, false));
-            clause.emplace_back(CMSat::Lit(_c, false));
-//        _os.add_clause(clause);
-            _os.emplace_back(clause);
-            clause.clear();
-        }
-
-        void operator_not(expr_t &u) const {
-            std::vector<CMSat::Lit> clause;
-
-            uint64_t _a = indexof(u);
-            uint64_t _b = indexof(u->oper1);
-
-            this->operator()(u->oper1);
-
-            clause.emplace_back(CMSat::Lit(_a, true));
-            clause.emplace_back(CMSat::Lit(_b, true));
-//        _os.add_clause(clause);
-            _os.emplace_back(clause);
-            clause.clear();
-
-            clause.emplace_back(CMSat::Lit(_a, false));
-            clause.emplace_back(CMSat::Lit(_b, false));
-//        _os.add_clause(clause);
-            _os.emplace_back(clause);
-            clause.clear();
-        }
-    };
-
-
-    expr_t operator&&(const expr_t &a, const expr_t &b) {
-        assert(a.get() != nullptr);
-        assert(b.get() != nullptr);
-        return expr_t(new expr_s(a, b, expr_type_e::_op_and));
+        expr_t operator*(const expr_t &a, const expr_t &b);
     }
 
-    expr_t operator||(const expr_t &a, const expr_t &b) {
-        assert(a.get() != nullptr);
-        assert(b.get() != nullptr);
-        return expr_t(new expr_s(a, b, expr_type_e::_op_or));
+    namespace real {
+
+        struct expr_s;
+        typedef std::shared_ptr<expr_s> expr_t;
+        enum class expr_type_e {
+            _var, _op_neg, _op_plus, _op_mul, _op_pow, _op_sin, _op_cos, _op_exp, _op_constant, SIZE
+        };
+
+        struct expr_s {
+
+            expr_s(const expr_t oper1, expr_type_e type);
+
+            explicit expr_s(const std::string &var);
+            explicit expr_s(const std::string &var, const uint64_t constant);
+            explicit expr_s(const uint64_t constant);
+
+            expr_s(const expr_t oper1, const expr_t oper2, expr_type_e type);
+
+            expr_t oper1;
+            expr_t oper2;
+            const std::string var;
+            const uint64_t constant;
+            expr_type_e type;
+
+        };
+
+        expr_t operator*(const expr_t &a, const expr_t &b);
+
+        expr_t operator+(const expr_t &a, const expr_t &b);
+
+        expr_t operator-(const expr_t &a);
+
+        expr_t operator^(const expr_t &a, const expr_t &b);
+
+        struct generator {
+            generator(const std::vector<uint32_t>& stack, uint32_t max_vars, uint32_t max_constant);
+
+            std::vector<uint32_t > stack;
+            std::vector<expr_t> expr_queue;
+            const uint32_t max_vars;
+            const uint32_t max_constant;
+
+            expr_t operator()();
+
+            void operator_var(const uint32_t i);
+
+            void operator_constant(const uint64_t i);
+
+            void operator_mul();
+
+            void operator_pow();
+
+            void operator_plus();
+
+            void operator_neg();
+
+            void operator_cos();
+            void operator_sin();
+
+            void operator_exp();
+        };
+
+        struct printer {
+            printer();
+
+            void operator()(const expr_t& e);
+
+            void operator_var(const expr_t& e);
+
+            void operator_constant(const expr_t& e);
+
+            void operator_mul(const expr_t& e);
+
+            void operator_pow(const expr_t& e);
+
+            void operator_plus(const expr_t& e);
+
+            void operator_neg(const expr_t& e);
+
+            void operator_sin(const expr_t& e);
+
+            void operator_cos(const expr_t& e);
+
+            void operator_exp(const expr_t& e);
+        };
+
+
+        struct eval {
+            eval(const std::vector<double> vars);
+
+            const std::vector<double> vars;
+
+            double operator()(const expr_t& e);
+
+            double operator_var(const expr_t& e);
+
+            double operator_constant(const expr_t& e);
+
+            double operator_mul(const expr_t& e);
+
+            double operator_pow(const expr_t& e);
+
+            double operator_plus(const expr_t& e);
+
+            double operator_neg(const expr_t& e);
+
+            double operator_sin(const expr_t& e);
+
+            double operator_cos(const expr_t& e);
+
+            double operator_exp(const expr_t& e);
+        };
+
     }
-
-    expr_t operator!(const expr_t &a) {
-        assert(a.get() != nullptr);
-        return expr_t(new expr_s(a, expr_type_e::_op_not));
-    }
-
-    expr_t operator>>(const expr_t &a, const expr_t &b) {
-        assert(a.get() != nullptr);
-        assert(b.get() != nullptr);
-        return !a || b;
-    }
-
-    expr_t operator*(const expr_t &a, const expr_t &b) {
-        assert(a.get() != nullptr);
-        assert(b.get() != nullptr);
-        return (a >> b) && (b >> a);
-    }
-
-
 }
 
 

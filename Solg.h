@@ -17,7 +17,7 @@
 
 namespace solg {
 
-    typedef double solg_t;
+    typedef float solg_t;
 
     namespace gate2 {
         enum class component : uint8_t {
@@ -42,7 +42,7 @@ namespace solg {
 
 
         class Gate {
-            gate2::state_t state, state_prev, k1, k2, k3, k4, k1_step, k2_step, k3_step, k4_step;
+            gate2::state_t state, state_prev;//, k1, k2, k3, k4, k1_step, k2_step, k3_step, k4_step;
             const solg_t step = 1e-7;
             const solg_t C = 1e-5;
             const solg_t R = 1;
@@ -58,15 +58,15 @@ namespace solg {
             Gate(const gate2::logic& gate) : gate(gate), I{0,0} {
                 memset(&state, 0, sizeof(state));
                 memset(&state_prev, 0, sizeof(state_prev));
-                memset(&k1, 0, sizeof(k1));
-                memset(&k2, 0, sizeof(k2));
-                memset(&k3, 0, sizeof(k3));
-                memset(&k4, 0, sizeof(k4));
-
-                memset(&k1_step, 0, sizeof(k1_step));
-                memset(&k2_step, 0, sizeof(k2_step));
-                memset(&k3_step, 0, sizeof(k3_step));
-                memset(&k4_step, 0, sizeof(k4_step));
+//                memset(&k1, 0, sizeof(k1));
+//                memset(&k2, 0, sizeof(k2));
+//                memset(&k3, 0, sizeof(k3));
+//                memset(&k4, 0, sizeof(k4));
+//
+//                memset(&k1_step, 0, sizeof(k1_step));
+//                memset(&k2_step, 0, sizeof(k2_step));
+//                memset(&k3_step, 0, sizeof(k3_step));
+//                memset(&k4_step, 0, sizeof(k4_step));
 
                 std::uniform_real_distribution<double> unif(0,1);
                 std::default_random_engine re;
@@ -115,15 +115,15 @@ namespace solg {
             }
 
             void rk4_1(const solg_t i1, const solg_t i2);
-            void rk4_2();
-            void rk4_3();
-            void rk4_4();
+//            void rk4_2();
+//            void rk4_3();
+//            void rk4_4();
 
             void rk4(const solg_t i1, const solg_t i2) {
                 rk4_1(i1, i2);
-                rk4_2();
-                rk4_3();
-                rk4_4();
+//                rk4_2();
+//                rk4_3();
+//                rk4_4();
             }
         };
     }
@@ -153,7 +153,7 @@ namespace solg {
 
 
         class Gate {
-            gate3::state_t state, state_prev, k1, k2, k3, k4, k1_step, k2_step, k3_step, k4_step;
+            gate3::state_t state, state_prev;//, k1, k2, k3, k4, k1_step, k2_step, k3_step, k4_step;
             const solg_t step = 1e-7;
             const solg_t C = 1e-5;
             const solg_t R = 1;
@@ -169,15 +169,15 @@ namespace solg {
             Gate(const gate3::logic& gate) : gate(gate), I{0,0} {
                 memset(&state, 0, sizeof(state));
                 memset(&state_prev, 0, sizeof(state_prev));
-                memset(&k1, 0, sizeof(k1));
-                memset(&k2, 0, sizeof(k2));
-                memset(&k3, 0, sizeof(k3));
-                memset(&k4, 0, sizeof(k4));
-
-                memset(&k1_step, 0, sizeof(k1_step));
-                memset(&k2_step, 0, sizeof(k2_step));
-                memset(&k3_step, 0, sizeof(k3_step));
-                memset(&k4_step, 0, sizeof(k4_step));
+//                memset(&k1, 0, sizeof(k1));
+//                memset(&k2, 0, sizeof(k2));
+//                memset(&k3, 0, sizeof(k3));
+//                memset(&k4, 0, sizeof(k4));
+//
+//                memset(&k1_step, 0, sizeof(k1_step));
+//                memset(&k2_step, 0, sizeof(k2_step));
+//                memset(&k3_step, 0, sizeof(k3_step));
+//                memset(&k4_step, 0, sizeof(k4_step));
 
                 std::uniform_real_distribution<double> unif(0,1);
                 std::default_random_engine re;
@@ -230,15 +230,15 @@ namespace solg {
             }
 
             void rk4_1(const solg_t i1, const solg_t i2, const solg_t i3);
-            void rk4_2();
-            void rk4_3();
-            void rk4_4();
+//            void rk4_2();
+//            void rk4_3();
+//            void rk4_4();
 
             void rk4(const solg_t i1, const solg_t i2, const solg_t i3) {
                 rk4_1(i1, i2, i3);
-                rk4_2();
-                rk4_3();
-                rk4_4();
+//                rk4_2();
+//                rk4_3();
+//                rk4_4();
             }
         };
     }

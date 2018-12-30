@@ -19,6 +19,6 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
-add_executable(pcb_sat main.cpp Expression.cpp Expression.h Solg_solver.cpp Solg_solver.h Solg.cpp Solg.h Circuit.cpp Circuit.h)
+add_executable(pcb_sat main.cpp Expression.cpp Expression.h Solg_solver.cpp Solg_solver.h Solg.cpp Solg.h Circuit.cpp Circuit.h Dynamic.cpp Dynamic.h)
 target_compile_options(pcb_sat PUBLIC -O3 -march=native)
-target_link_libraries(pcb_sat ${CRYPTOMINISAT5_LIBRARIES} ${Boost_LIBRARIES} Eigen3::Eigen)
+target_link_libraries(pcb_sat ${CRYPTOMINISAT5_LIBRARIES} ${Boost_LIBRARIES} Eigen3::Eigen xxhash)
