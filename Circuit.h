@@ -75,7 +75,8 @@ namespace solg {
             Circuit(const std::vector<uint64_t >& linear, const std::vector<std::vector<CMSat::Lit>>& clauses) : clauses(clauses), linear_size(linear.size()) {
 
                 std::map<uint32_t , uint32_t > rt_len;
-                std::map<uint64_t , std::pair<uint32_t, bool> > terminal_map;
+//                std::map<uint64_t , std::pair<uint32_t, bool> > terminal_map;
+                std::map<uint64_t , std::vector<std::pair<uint32_t, bool>> > terminal_map;
                 std::vector<uint32_t > rt_len_keys;
 
                 std::cout << "sizeof(Gate3) " << sizeof(solg::gate3::Gate) << std::endl;
@@ -113,16 +114,20 @@ namespace solg {
                             rt_len[lit.var()]++;
 
                             uint64_t hash = lit.var();
-                            for(int j = 0; j < rt_len[lit.var()]; j++) {
-                                hash = XXH64(&hash, 8, 0);
-                            }
+//                            for(int j = 0; j < rt_len[lit.var()]; j++) {
+//                                hash = XXH64(&hash, 8, 0);
+//                            }
 
                             std::pair<uint64_t ,uint64_t > p((uint64_t )g.get(), i);
                             terminal_id.insert(std::make_pair(p, terminal_count++));
-                            if(terminal_map.count(hash) > 0) {
-                                std::cout << "collision" << std::endl;
+//                            if(terminal_map.count(hash) > 0) {
+//                                std::cout << "collision" << std::endl;
+//                            }
+                            if(terminal_map.count(hash) == 0) {
+                                terminal_map.insert(std::make_pair(hash, std::vector<std::pair<uint32_t, bool>>()));
                             }
-                            terminal_map.insert(std::make_pair(hash, std::make_pair(terminal_id[p], lit.sign())));
+                            terminal_map[hash].emplace_back(std::make_pair(terminal_id[p], lit.sign()));
+//                            terminal_map.insert(std::make_pair(hash, std::make_pair(terminal_id[p], lit.sign())));
 
                         }
                         gates.emplace_back(std::move(g));
@@ -137,16 +142,20 @@ namespace solg {
                             rt_len[lit.var()]++;
 
                             uint64_t hash = lit.var();
-                            for(int j = 0; j < rt_len[lit.var()]; j++) {
-                                hash = XXH64(&hash, 8, 0);
-                            }
+//                            for(int j = 0; j < rt_len[lit.var()]; j++) {
+//                                hash = XXH64(&hash, 8, 0);
+//                            }
 
                             std::pair<uint64_t ,uint64_t > p((uint64_t )g.get(), i);
                             terminal_id.insert(std::make_pair(p, terminal_count++));
-                            if(terminal_map.count(hash) > 0) {
-                                std::cout << "collision" << std::endl;
+//                            if(terminal_map.count(hash) > 0) {
+//                                std::cout << "collision" << std::endl;
+//                            }
+                            if(terminal_map.count(hash) == 0) {
+                                terminal_map.insert(std::make_pair(hash, std::vector<std::pair<uint32_t, bool>>()));
                             }
-                            terminal_map.insert(std::make_pair(hash, std::make_pair(terminal_id[p], lit.sign())));
+                            terminal_map[hash].emplace_back(std::make_pair(terminal_id[p], lit.sign()));
+//                            terminal_map.insert(std::make_pair(hash, std::make_pair(terminal_id[p], lit.sign())));
                         }
 
                         gates.emplace_back(std::move(g));
@@ -154,22 +163,21 @@ namespace solg {
                 }
 
                 std::vector<T> triplets;
-                for(int k = 0; k < rt_len_keys.size(); k++) {
-                    auto first = rt_len_keys[k];
-                    uint64_t hash = first;
-                    for(int j = 0; j < rt_len[first]; j++) {
-                        hash = XXH64(&hash, 8, 0);
-                        auto& p = terminal_map[hash];
-                        triplets.emplace_back(T(first, p.first, p.second ? -1 : 1));
-                    }
-                }
-                /*
+//                for(int k = 0; k < rt_len_keys.size(); k++) {
+//                    auto first = rt_len_keys[k];
+//                    uint64_t hash = first;
+//                    for(int j = 0; j < rt_len[first]; j++) {
+//                        hash = XXH64(&hash, 8, 0);
+//                        auto& p = terminal_map[hash];
+//                        triplets.emplace_back(T(first, p.first, p.second ? -1 : 1));
+//                    }
+//                }
+
                 for(auto it = terminal_map.begin(); it != terminal_map.end(); ++it) {
                     for(const std::pair<uint64_t, bool>& t : it->second) {
                         triplets.emplace_back(T(it->first, t.first, t.second ? -1 : 1));
                     }
                 }
-                 */
 
 
                 I_mat.setFromTriplets(triplets.begin(), triplets.end());
