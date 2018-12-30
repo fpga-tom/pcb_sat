@@ -136,12 +136,12 @@ solg_t solg::gate2::Gate::dv3dt(const gate2::state_t& s) {
 }
 
 void solg::gate2::Gate::voltage_update(const gate2::state_t& s1, gate2::state_t& s2) {
-    s2.term_state[(int)terminal ::V1_M] =  0 * s1.term_state[(int)terminal ::v1] - 1 * s1.term_state[(int)terminal ::v2] + 2 * s1.term_state[(int)terminal ::v3];// + 1 * f;
-    s2.term_state[(int)terminal ::V1_R] =  3 * s1.term_state[(int)terminal ::v1] + 1 * s1.term_state[(int)terminal ::v2] - 3 * s1.term_state[(int)terminal ::v3];// - 1 * f;
-    s2.term_state[(int)terminal ::V2_M] = -1 * s1.term_state[(int)terminal ::v1] + 0 * s1.term_state[(int)terminal ::v2] + 2 * s1.term_state[(int)terminal ::v3];// + 1 * f;
-    s2.term_state[(int)terminal ::V2_R] =  1 * s1.term_state[(int)terminal ::v1] + 3 * s1.term_state[(int)terminal ::v2] - 3 * s1.term_state[(int)terminal ::v3];// - 1 * f;
-    s2.term_state[(int)terminal ::V3_M] =  2 * s1.term_state[(int)terminal ::v1] + 2 * s1.term_state[(int)terminal ::v2] - 1 * s1.term_state[(int)terminal ::v3];// - 2 * f;
-    s2.term_state[(int)terminal ::V3_R] = -3 * s1.term_state[(int)terminal ::v1] - 3 * s1.term_state[(int)terminal ::v2] + 5 * s1.term_state[(int)terminal ::v3];// + 2 * f;
+    s2.term_state[(int)terminal ::V1_M] =  0 * s1.term_state[(int)terminal ::v1] - 1 * s1.term_state[(int)terminal ::v2] + 1 * s1.term_state[(int)terminal ::v3] - 1;// * f;
+    s2.term_state[(int)terminal ::V1_R] =  3 * s1.term_state[(int)terminal ::v1] + 1 * s1.term_state[(int)terminal ::v2] - 2 * s1.term_state[(int)terminal ::v3] + 1;// * f;
+    s2.term_state[(int)terminal ::V2_M] = -1 * s1.term_state[(int)terminal ::v1] + 0 * s1.term_state[(int)terminal ::v2] + 1 * s1.term_state[(int)terminal ::v3] - 1;// * f;
+    s2.term_state[(int)terminal ::V2_R] =  1 * s1.term_state[(int)terminal ::v1] + 3 * s1.term_state[(int)terminal ::v2] - 2 * s1.term_state[(int)terminal ::v3] + 1;// * f;
+    s2.term_state[(int)terminal ::V3_M] =  2 * s1.term_state[(int)terminal ::v1] + 2 * s1.term_state[(int)terminal ::v2] - 1 * s1.term_state[(int)terminal ::v3] + 2;// * f;
+    s2.term_state[(int)terminal ::V3_R] = -3 * s1.term_state[(int)terminal ::v1] - 3 * s1.term_state[(int)terminal ::v2] + 5 * s1.term_state[(int)terminal ::v3] - 2;// * f;
 }
 
 
@@ -165,6 +165,7 @@ void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
     voltage_update(state, state);
 
     // rk4 step k1
+    k1 = state;
     for (int i = 0; i < (int) memristor::SIZE; i++) {
         k1.mem_state[i] = dxdt((memristor) i, state) * step;
     }
@@ -172,7 +173,7 @@ void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
         k1_step.mem_state[i] = k1.mem_state[i] / 2 + state.mem_state[i];
 
     }
-    k1 = state;
+
 #if defined(V2) || defined(V3)
     k1.term_state[(int) terminal::v1] = dv1dt(state) * step;
 #endif
@@ -200,6 +201,7 @@ void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
 //void solg::gate2::Gate::rk4_2() {
 
     voltage_update(k1_step, k1_step);
+    k2 = k1_step;
     // rk4 step k2
     for (int i = 0; i < (int) memristor::SIZE; i++) {
         k2.mem_state[i] = dxdt((memristor) i, k1_step) * step;
@@ -208,7 +210,7 @@ void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
         k2_step.mem_state[i] = k2.mem_state[i] / 2 + state.mem_state[i];
 
     }
-    k2 = k1_step;
+
 #if defined(V2) || defined(V3)
     k2.term_state[(int) terminal::v1] = dv1dt(k1_step) * step;
 #endif
@@ -235,8 +237,11 @@ void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
 //
 //void solg::gate2::Gate::rk4_3() {
     // rk4 step k3
+
     voltage_update(k2_step, k2_step);
+    k3 = k2_step;
     // rk4 step k2
+
     for (int i = 0; i < (int) memristor::SIZE; i++) {
         k3.mem_state[i] = dxdt((memristor) i, k2_step) * step;
     }
@@ -244,7 +249,7 @@ void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
         k3_step.mem_state[i] = k3.mem_state[i] / 2 + state.mem_state[i];
 
     }
-    k3 = k2_step;
+
 #if defined(V2) || defined(V3)
     k3.term_state[(int) terminal::v1] = dv1dt(k2_step) * step;
 #endif
@@ -274,7 +279,7 @@ void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
         // rk4 step k4
 
     voltage_update(k3_step, k3_step);
-
+    k4 = k3_step;
     for (int i = 0; i < (int) memristor::SIZE; i++) {
         k4.mem_state[i] = dxdt((memristor) i, k3_step) * step;
     }
@@ -283,7 +288,7 @@ void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
 
     }
 
-    k4 = k3_step;
+
 #if defined(V2) || defined(V3)
     k4.term_state[(int) terminal::v1] = dv1dt(k3_step) * step;
 #endif
@@ -335,13 +340,13 @@ void solg::gate2::Gate::rk4_1(const solg_t i1, const solg_t i2) {
 }
 
 solg_t solg::gate2::Gate::current_i1() {
-    return C*(-2*(state.term_state[(int)terminal::v1] - state_prev.term_state[(int)terminal::v1])
-    -1*(state.term_state[(int)terminal::v2] - state_prev.term_state[(int)terminal::v2])) - mem_1_i_off(state);
+    return (C*(-2*(state.term_state[(int)terminal::v1] - state_prev.term_state[(int)terminal::v1])
+    -1*(state.term_state[(int)terminal::v2] - state_prev.term_state[(int)terminal::v2])) - mem_1_i_off(state));
 }
 
 solg_t solg::gate2::Gate::current_i2() {
-    return C*(-1*(state.term_state[(int)terminal::v1] - state_prev.term_state[(int)terminal::v1])
-              -2*(state.term_state[(int)terminal::v2] - state_prev.term_state[(int)terminal::v2])) - mem_2_i_off(state);
+    return (C*(-1*(state.term_state[(int)terminal::v1] - state_prev.term_state[(int)terminal::v1])
+              -2*(state.term_state[(int)terminal::v2] - state_prev.term_state[(int)terminal::v2])) - mem_2_i_off(state));
 }
 
 }
@@ -424,11 +429,11 @@ namespace solg::gate3 {
 
     void solg::gate3::Gate::dv123dt(gate3::state_t& s) {
         solg_t m1 = mem_1(s);
-        solg_t s3 = mem_3(s) - m1;
+        solg_t s3 = mem_3(s) + m1;
         solg_t s2 = mem_2(s) - .5*m1;
         m1 += s3;
         s2 += 1.5 * s3;
-        m1 += .4 * s3;
+        m1 += .4 * s2;
         s3 -= .8 * s2;
 
         s.m1 = m1;
@@ -449,12 +454,12 @@ namespace solg::gate3 {
     }
 
     void solg::gate3::Gate::voltage_update(const gate3::state_t& s1, gate3::state_t& s2) {
-        s2.term_state[(int)terminal ::V1_M] =  0 * s1.term_state[(int)terminal ::v1] - 1 * s1.term_state[(int)terminal ::v2] + 1 * s1.term_state[(int)terminal ::v3] + 1 * s1.term_state[(int)terminal::v4];
-        s2.term_state[(int)terminal ::V1_R] =  3 * s1.term_state[(int)terminal ::v1] + 1 * s1.term_state[(int)terminal ::v2] - 2 * s1.term_state[(int)terminal ::v3] - 1 * s1.term_state[(int)terminal::v4];
-        s2.term_state[(int)terminal ::V2_M] = -1 * s1.term_state[(int)terminal ::v1] + 0 * s1.term_state[(int)terminal ::v2] + 1 * s1.term_state[(int)terminal ::v3] + 1 * s1.term_state[(int)terminal::v4];
-        s2.term_state[(int)terminal ::V2_R] =  1 * s1.term_state[(int)terminal ::v1] + 3 * s1.term_state[(int)terminal ::v2] - 2 * s1.term_state[(int)terminal ::v3] - 1 * s1.term_state[(int)terminal::v4];
-        s2.term_state[(int)terminal ::V3_M] =  2 * s1.term_state[(int)terminal ::v1] + 2 * s1.term_state[(int)terminal ::v2] - 1 * s1.term_state[(int)terminal ::v3] - 2 * s1.term_state[(int)terminal::v4];
-        s2.term_state[(int)terminal ::V3_R] = -3 * s1.term_state[(int)terminal ::v1] - 3 * s1.term_state[(int)terminal ::v2] + 5 * s1.term_state[(int)terminal ::v3] + 2 * s1.term_state[(int)terminal::v4];
+        s2.term_state[(int)terminal ::V1_M] =  0 * s1.term_state[(int)terminal ::v1] - 1 * s1.term_state[(int)terminal ::v2] + 1 * s1.term_state[(int)terminal ::v3] - 1 * s1.term_state[(int)terminal::v4];
+        s2.term_state[(int)terminal ::V1_R] =  3 * s1.term_state[(int)terminal ::v1] + 1 * s1.term_state[(int)terminal ::v2] - 2 * s1.term_state[(int)terminal ::v3] + 1 * s1.term_state[(int)terminal::v4];
+        s2.term_state[(int)terminal ::V2_M] = -1 * s1.term_state[(int)terminal ::v1] + 0 * s1.term_state[(int)terminal ::v2] + 1 * s1.term_state[(int)terminal ::v3] - 1 * s1.term_state[(int)terminal::v4];
+        s2.term_state[(int)terminal ::V2_R] =  1 * s1.term_state[(int)terminal ::v1] + 3 * s1.term_state[(int)terminal ::v2] - 2 * s1.term_state[(int)terminal ::v3] + 1 * s1.term_state[(int)terminal::v4];
+        s2.term_state[(int)terminal ::V3_M] =  2 * s1.term_state[(int)terminal ::v1] + 2 * s1.term_state[(int)terminal ::v2] - 1 * s1.term_state[(int)terminal ::v3] + 2 * s1.term_state[(int)terminal::v4];
+        s2.term_state[(int)terminal ::V3_R] = -3 * s1.term_state[(int)terminal ::v1] - 3 * s1.term_state[(int)terminal ::v2] + 5 * s1.term_state[(int)terminal ::v3] - 2 * s1.term_state[(int)terminal::v4];
     }
 
 
@@ -476,7 +481,7 @@ namespace solg::gate3 {
         state.term_state[(int)terminal::i2] = i2;
         state.term_state[(int)terminal::i3] = i3;
         voltage_update(state, state);
-
+        k1 = state;
         // rk4 step k1
         for (int i = 0; i < (int) memristor::SIZE; i++) {
             k1.mem_state[i] = dxdt((memristor) i, state) * step;
@@ -485,7 +490,7 @@ namespace solg::gate3 {
             k1_step.mem_state[i] = k1.mem_state[i] / 2 + state.mem_state[i];
 
         }
-        k1 = state;
+
         dv123dt(state);
         k1.term_state[(int) terminal::v1] = dv1dt(state) * step;
         k1.term_state[(int) terminal::v2] = dv2dt(state) * step;
@@ -502,6 +507,7 @@ namespace solg::gate3 {
 //    void solg::gate3::Gate::rk4_2() {
 
         voltage_update(k1_step, k1_step);
+        k2 = k1_step;
         // rk4 step k2
         for (int i = 0; i < (int) memristor::SIZE; i++) {
             k2.mem_state[i] = dxdt((memristor) i, k1_step) * step;
@@ -510,7 +516,7 @@ namespace solg::gate3 {
             k2_step.mem_state[i] = k2.mem_state[i] / 2 + state.mem_state[i];
 
         }
-        k2 = k1_step;
+
         dv123dt(k1_step);
         k2.term_state[(int) terminal::v1] = dv1dt(k1_step) * step;
         k2.term_state[(int) terminal::v2] = dv2dt(k1_step) * step;
@@ -527,6 +533,7 @@ namespace solg::gate3 {
 //    void solg::gate3::Gate::rk4_3() {
         // rk4 step k3
         voltage_update(k2_step, k2_step);
+        k3 = k2_step;
         // rk4 step k2
         for (int i = 0; i < (int) memristor::SIZE; i++) {
             k3.mem_state[i] = dxdt((memristor) i, k2_step) * step;
@@ -535,7 +542,7 @@ namespace solg::gate3 {
             k3_step.mem_state[i] = k3.mem_state[i] / 2 + state.mem_state[i];
 
         }
-        k3 = k2_step;
+
         dv123dt(k2_step);
         k3.term_state[(int) terminal::v1] = dv1dt(k2_step) * step;
         k3.term_state[(int) terminal::v2] = dv2dt(k2_step) * step;
@@ -554,7 +561,7 @@ namespace solg::gate3 {
         // rk4 step k4
 
         voltage_update(k3_step, k3_step);
-
+        k4 = k3_step;
         for (int i = 0; i < (int) memristor::SIZE; i++) {
             k4.mem_state[i] = dxdt((memristor) i, k3_step) * step;
         }
@@ -563,7 +570,7 @@ namespace solg::gate3 {
 
         }
 
-        k4 = k3_step;
+
         dv123dt(k3_step);
         k4.term_state[(int) terminal::v1] = dv1dt(k3_step) * step;
         k4.term_state[(int) terminal::v2] = dv2dt(k3_step) * step;
@@ -589,24 +596,24 @@ namespace solg::gate3 {
     }
 
     solg_t solg::gate3::Gate::current_i1() {
-        return C*(-2*(state.term_state[(int)terminal::v1] - state_prev.term_state[(int)terminal::v1])
+        return (C*(-2*(state.term_state[(int)terminal::v1] - state_prev.term_state[(int)terminal::v1])
                   -1*(state.term_state[(int)terminal::v2] - state_prev.term_state[(int)terminal::v2])
                   +1*(state.term_state[(int)terminal::v3] - state_prev.term_state[(int)terminal::v3])
-                  ) - mem_1_i_off(state);
+                  ) - mem_1_i_off(state));
     }
 
     solg_t solg::gate3::Gate::current_i2() {
-        return C*(-1*(state.term_state[(int)terminal::v1] - state_prev.term_state[(int)terminal::v1])
+        return (C*(-1*(state.term_state[(int)terminal::v1] - state_prev.term_state[(int)terminal::v1])
                   -2*(state.term_state[(int)terminal::v2] - state_prev.term_state[(int)terminal::v2])
                   +1*(state.term_state[(int)terminal::v3] - state_prev.term_state[(int)terminal::v3])
-                  ) - mem_2_i_off(state);
+                  ) - mem_2_i_off(state));
     }
 
     solg_t solg::gate3::Gate::current_i3() {
-        return C*(+2*(state.term_state[(int)terminal::v1] - state_prev.term_state[(int)terminal::v1])
+        return (C*(+2*(state.term_state[(int)terminal::v1] - state_prev.term_state[(int)terminal::v1])
                   +2*(state.term_state[(int)terminal::v2] - state_prev.term_state[(int)terminal::v2])
                   -3*(state.term_state[(int)terminal::v3] - state_prev.term_state[(int)terminal::v3])
-                  ) - mem_3_i_off(state);
+                  ) - mem_3_i_off(state));
     }
 
 }

@@ -55,12 +55,12 @@ lbool find(uint64_t num_pages) {
     std::vector<std::pair<int ,int >> E;
 
     srand(3);
-    int V_count = 230;
+    int V_count = 5;
     for(int i = 0; i < V_count; i++) {
         V.emplace_back(i);
     }
-    int pairs = 340;
-    int max_pins = 15;
+    int pairs = 5;
+    int max_pins = 2;
     for(int i = 0; i < pairs; i++) {
         auto r1 = rand() % V_count;
         auto pins = rand() % max_pins;
@@ -254,15 +254,25 @@ lbool find(uint64_t num_pages) {
     std::cout << "clauses " << clauses.size() << std::endl;
 
 
+
+    uint32_t v1 = linear.size();
+    uint32_t v2 = v1 + 1;
+    solver.new_var();
+    solver.new_var();
+    clauses.emplace_back(std::vector<Lit>{Lit(tseitin.indexof(target), false), Lit(v1, false), Lit(v2, false)});
+    clauses.emplace_back(std::vector<Lit>{Lit(tseitin.indexof(target), false), Lit(v1, false), Lit(v2, true)});
+    clauses.emplace_back(std::vector<Lit>{Lit(tseitin.indexof(target), false), Lit(v1, true), Lit(v2, false)});
+    clauses.emplace_back(std::vector<Lit>{Lit(tseitin.indexof(target), false), Lit(v1, true), Lit(v2, true)});
+
     for(const auto& c : clauses) {
         solver.add_clause(c);
     }
-    solver.add_clause(std::vector<Lit>{Lit(tseitin.indexof(target), false)});
+
 
     solver.set_verbosity(0);
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    lbool ret = l_False;//solver.solve();
+    lbool ret = solver.solve();
     clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 
     uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;

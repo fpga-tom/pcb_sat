@@ -5,6 +5,7 @@
 #ifndef PCB_SAT_CIRCUIT_H
 #define PCB_SAT_CIRCUIT_H
 
+
 #include <vector>
 #include <memory>
 #include <map>
@@ -14,6 +15,7 @@
 #include <Eigen/Dense>
 #include <xxhash.h>
 #include "Solg.h"
+#include <fstream>
 
 namespace solg {
 
@@ -197,13 +199,42 @@ namespace solg {
 
             struct gate_visitor {
                 uint64_t t;
-                gate_visitor(const uint64_t t) : t(t) {};
+                explicit gate_visitor(const uint64_t t) : t(t) {};
                 solg_t operator()(const solg::gate2::Gate& g) {
                     return g.I[t];
                 }
 
                 solg_t operator()(const solg::gate3::Gate& g) {
                     return g.I[t];
+                }
+            };
+
+            struct gate_voltage_visitor {
+                uint64_t t;
+                explicit gate_voltage_visitor(const uint64_t t) : t(t) {};
+                solg_t operator()(const solg::gate2::Gate& g) {
+                    switch(t) {
+                        case 0:
+                            return g.state.term_state[(int)solg::gate2::state::terminal::v1];
+                        case 1:
+                            return g.state.term_state[(int)solg::gate2::state::terminal::v2];
+                        case 2:
+                            return g.state.term_state[(int)solg::gate2::state::terminal::v3];
+                    }
+                    return 0;
+
+                }
+
+                solg_t operator()(const solg::gate3::Gate& g) {
+                    switch(t) {
+                        case 0:
+                            return g.state.term_state[(int)solg::gate3::state::terminal::v1];
+                        case 1:
+                            return g.state.term_state[(int)solg::gate3::state::terminal::v2];
+                        case 2:
+                            return g.state.term_state[(int)solg::gate3::state::terminal::v3];
+                    }
+                    return 0;
                 }
             };
 
@@ -235,7 +266,13 @@ namespace solg {
             void solve() {
 //                Eigen::VectorXd I_vec_new(linear_size);
 //                std::vector<solg_t > I_vec_new(linear_size);
-                for(int i = 0; i < 100; i++) {
+                std::ofstream ofs1("/tmp/gate_0_i1.txt");
+                std::ofstream ofs1_voltage("/tmp/gate_0_v1.txt");
+                std::ofstream ofs2_voltage("/tmp/gate_0_v2.txt");
+                std::ofstream ofs3_voltage("/tmp/gate_0_v3.txt");
+                std::ofstream ofs2("/tmp/gate_0_i2.txt");
+                std::ofstream ofs3("/tmp/gate_0_i3.txt");
+                for(int i = 0; i < 10000000; i++) {
                     Vec I_vec_new = I_mat * I_vec;
 
 //#pragma omp parallel
@@ -265,21 +302,24 @@ namespace solg {
 
                         auto g1 = std::make_pair((uint64_t )g.get(), 0);
                         if(terminal_id.count(g1) > 0) {
-                            i1 = I_vec_new[clause[0].var()] - I_vec[terminal_id[g1]];
+                            const CMSat::Lit &l = clause[0];
+                            i1 = (I_vec_new[l.var()] - I_vec[terminal_id[g1]] * (l.sign() ? -1 : 1));
                         }
                         auto g2 = std::make_pair((uint64_t )g.get(), 1);
                         if(terminal_id.count(g2) > 0) {
-                            i2 = I_vec_new[clause[1].var()] - I_vec[terminal_id[g2]];
+                            const CMSat::Lit &l = clause[1];
+                            i2 = (I_vec_new[l.var()] - I_vec[terminal_id[g2]] * (l.sign() ? -1 : 1));
                         }
                         auto g3 = std::make_pair((uint64_t )g.get(), 2);
                         if(terminal_id.count(g3) > 0) {
-                            i3 = I_vec_new[clause[2].var()] - I_vec[terminal_id[g3]];
+                            const CMSat::Lit &l = clause[2];
+                            i3 = (I_vec_new[l.var()] - I_vec[terminal_id[g3]] * (l.sign() ? -1 : 1));
                         }
 
                         std::visit(rk4_gate_visitor(i1, i2, i3), *g);
                     }
-                    if(i % 10 == 0)
-                        std::cout << "updating current" << std::endl;
+                    if(i % 1000 == 0)
+                        std::cout << "iter " << i << std::endl;
 #pragma omp parallel
 #pragma omp for
                     for(int j = 0; j < gates.size(); j++) {
@@ -295,14 +335,26 @@ namespace solg {
                         auto g1 = std::make_pair((uint64_t )g.get(), 0);
                         if(terminal_id.count(g1) > 0) {
                             I_vec[terminal_id[g1]] = std::visit(gate_visitor(0), *g);
+                            if(j==1) {
+                                ofs1 << i << "\t" << I_vec[terminal_id[g1]] << std::endl;
+                                ofs1_voltage << i << "\t" << std::visit(gate_voltage_visitor(0), *g) << std::endl;
+                            }
                         }
                         auto g2 = std::make_pair((uint64_t )g.get(), 1);
                         if(terminal_id.count(g2) > 0) {
                             I_vec[terminal_id[g2]] = std::visit(gate_visitor(1), *g);
+                            if(j==1) {
+                                ofs2 << i << "\t" << I_vec[terminal_id[g2]] << std::endl;
+                                ofs2_voltage << i << "\t" << std::visit(gate_voltage_visitor(1), *g) << std::endl;
+                            }
                         }
                         auto g3 = std::make_pair((uint64_t )g.get(), 2);
                         if(terminal_id.count(g3) > 0) {
                             I_vec[terminal_id[g3]] = std::visit(gate_visitor(2), *g);
+                            if(j==1) {
+                                ofs3 << i << "\t" << I_vec[terminal_id[g3]] << std::endl;
+                                ofs3_voltage << i << "\t" << std::visit(gate_voltage_visitor(2), *g) << std::endl;
+                            }
                         }
                     }
                 }

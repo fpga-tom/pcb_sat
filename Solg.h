@@ -42,7 +42,7 @@ namespace solg {
 
 
         class Gate {
-            gate2::state_t state, state_prev;//, k1, k2, k3, k4, k1_step, k2_step, k3_step, k4_step;
+
             const solg_t step = 1e-7;
             const solg_t C = 1e-5;
             const solg_t R = 1;
@@ -52,7 +52,7 @@ namespace solg {
 
             const gate2::logic gate;
         public:
-
+            gate2::state_t state, state_prev;//, k1, k2, k3, k4, k1_step, k2_step, k3_step, k4_step;
             solg_t I[2];
 
             Gate(const gate2::logic& gate) : gate(gate), I{0,0} {
@@ -137,8 +137,11 @@ namespace solg {
         enum class logic : uint8_t { _and, _or, SIZE };
 
         namespace state {
+//            enum class terminal : uint8_t {
+//                v1, v2, v3, v4, V1_R, V2_R, V3_R, V4_R, V1_M, V2_M, V3_M, V4_M, i1, i2, i3, i4, SIZE
+//            };
             enum class terminal : uint8_t {
-                v1, v2, v3, v4, V1_R, V2_R, V3_R, V4_R, V1_M, V2_M, V3_M, V4_M, i1, i2, i3, i4, SIZE
+                v1, v2, v3, v4, V1_R, V2_R, V3_R, V1_M, V2_M, V3_M, i1, i2, i3, SIZE
             };
             enum class memristor : uint8_t {
                 x1, x2, x3, x4, x5, x6, SIZE
@@ -153,7 +156,7 @@ namespace solg {
 
 
         class Gate {
-            gate3::state_t state, state_prev;//, k1, k2, k3, k4, k1_step, k2_step, k3_step, k4_step;
+
             const solg_t step = 1e-7;
             const solg_t C = 1e-5;
             const solg_t R = 1;
@@ -163,10 +166,10 @@ namespace solg {
 
             const gate3::logic gate;
         public:
-
+            gate3::state_t state, state_prev;//, k1, k2, k3, k4, k1_step, k2_step, k3_step, k4_step;
             solg_t I[3];
 
-            Gate(const gate3::logic& gate) : gate(gate), I{0,0} {
+            Gate(const gate3::logic& gate) : gate(gate), I{0,0,0} {
                 memset(&state, 0, sizeof(state));
                 memset(&state_prev, 0, sizeof(state_prev));
 //                memset(&k1, 0, sizeof(k1));
