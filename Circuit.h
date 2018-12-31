@@ -334,24 +334,24 @@ namespace solg {
 
                         auto g1 = std::make_pair((uint64_t )g.get(), 0);
                         if(terminal_id.count(g1) > 0) {
-                            I_vec[terminal_id[g1]] = std::visit(gate_visitor(0), *g);
-                            if(j==1) {
+                            I_vec[terminal_id[g1]] = -std::visit(gate_visitor(0), *g);
+                            if(j==502) {
                                 ofs1 << i << "\t" << I_vec[terminal_id[g1]] << std::endl;
                                 ofs1_voltage << i << "\t" << std::visit(gate_voltage_visitor(0), *g) << std::endl;
                             }
                         }
                         auto g2 = std::make_pair((uint64_t )g.get(), 1);
                         if(terminal_id.count(g2) > 0) {
-                            I_vec[terminal_id[g2]] = std::visit(gate_visitor(1), *g);
-                            if(j==1) {
+                            I_vec[terminal_id[g2]] = -std::visit(gate_visitor(1), *g);
+                            if(j==502) {
                                 ofs2 << i << "\t" << I_vec[terminal_id[g2]] << std::endl;
                                 ofs2_voltage << i << "\t" << std::visit(gate_voltage_visitor(1), *g) << std::endl;
                             }
                         }
                         auto g3 = std::make_pair((uint64_t )g.get(), 2);
                         if(terminal_id.count(g3) > 0) {
-                            I_vec[terminal_id[g3]] = std::visit(gate_visitor(2), *g);
-                            if(j==1) {
+                            I_vec[terminal_id[g3]] = -std::visit(gate_visitor(2), *g);
+                            if(j==502) {
                                 ofs3 << i << "\t" << I_vec[terminal_id[g3]] << std::endl;
                                 ofs3_voltage << i << "\t" << std::visit(gate_voltage_visitor(2), *g) << std::endl;
                             }
