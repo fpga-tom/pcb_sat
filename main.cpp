@@ -422,6 +422,12 @@ lbool find(uint64_t num_pages) {
     clauses1.emplace_back(clause);
     clause.clear();
 
+    clause.emplace_back(Lit(5, false));
+    clause.emplace_back(Lit(2, true));
+    clause.emplace_back(Lit(3, true));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
     NP np(clauses1);
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     np.solve();

@@ -112,7 +112,7 @@ public:
             else
                 s[i] = true;
         }
-        for(int i = 0; i < 58125000; i++) {
+        for(int i = 0; i < 158125000; i++) {
             s = mul(s, kuramoto);
 //            auto r = (s[0] or s[1] or s[2]) and (not s[3] or not s[4] or not s[5]) and (not s[6] or s[7] or s[8]) and (s[9] or not s[10] or not s[11]);
             auto r = check(s);
@@ -194,13 +194,13 @@ public:
 
             for(int j = 0; j < terminal; j++) {
                 if(m(i,j) == 1) {
-                    if(distribution(generator) < .45)
+                    if(distribution(generator) < .15)
 //                        ret[i] |= s[i] ^ s[j];
-                        ret[i] ^= s[j];
+                        ret[i] &= s[j];
                 } else if(m(i,j) == -1) {
-                    if(distribution(generator) < .45)
+                    if(distribution(generator) < .5)
 //                        ret[i] |= s[i] ^ (!s[j]);
-                        ret[i] ^= s[j];
+                        ret[i] &= s[j];
                 }
             }
         }
