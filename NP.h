@@ -194,11 +194,11 @@ public:
 
             for(int j = 0; j < terminal; j++) {
                 if(m(i,j) == 1) {
-                    if(distribution(generator) < .15)
+                    if(distribution(generator) < .05)
 //                        ret[i] |= s[i] ^ s[j];
                         ret[i] &= s[j];
                 } else if(m(i,j) == -1) {
-                    if(distribution(generator) < .5)
+                    if(distribution(generator) < .35)
 //                        ret[i] |= s[i] ^ (!s[j]);
                         ret[i] &= s[j];
                 }
