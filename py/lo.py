@@ -65,7 +65,7 @@ b=[
 for i in range(0,10):
     b[0] = (not s[0]) or s[0] ^ s[1] or s[0] ^ s[2] or (s[0] ^ (not s[6])) # a
     b[1] = (not s[1]) or s[1] ^ s[0] or s[1] ^ s[2] or (s[1] ^ (not s[10])) or (s[1] ^ (not s[3])) # b
-    b[2] = (not s[2]) or s[2] ^ s[1] or s[2] ^ s[0] or (s[2] ^ (s[4])) # c
+    b[2] = (not s[2]) or s[2] ^ s[1] or s[2] ^ s[0] or (s[2] ^ (not s[4])) # c
 
     b[3] = (not s[3]) or s[3] ^ (s[4]) or s[3] ^ (s[5]) or (s[3] ^ s[1]) # -b
     b[4] = (not s[4]) or (s[4]) ^ s[3] or (s[4]) ^ (s[5]) or (s[4] ^ s[2]) or (s[4] ^ s[7]) # -c

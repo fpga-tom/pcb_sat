@@ -10,6 +10,7 @@
 #include "Solg_solver.h"
 #include "Circuit.h"
 #include <boost/algorithm/string.hpp>
+#include "NP.h"
 
 using std::vector;
 using namespace CMSat;
@@ -340,7 +341,7 @@ lbool find(uint64_t num_pages) {
 
 //    Solg_solver solg(Solg_solver::gate_t::_or);
 //    solg.rk4();
-
+#if 0
     std::cout << "Creating circuit" << std::endl;
     solg::circuit::Circuit circ(linear, clauses);
 //    std::cout << "Circuit nodes " << circ.nodes.size() << std::endl;
@@ -355,6 +356,78 @@ lbool find(uint64_t num_pages) {
     delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
     std::cout << "Solving done " << (delta_us/1e6) << std::endl;
 
+#endif
+
+
+    std::vector<std::vector<Lit>> clauses1;
+
+    std::vector<Lit> clause;
+    clause.emplace_back(Lit(0, false));
+    clause.emplace_back(Lit(1, false));
+    clause.emplace_back(Lit(2, false));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
+    clause.emplace_back(Lit(1, false));
+    clause.emplace_back(Lit(2, true));
+    clause.emplace_back(Lit(3, true));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
+    clause.emplace_back(Lit(0, true));
+    clause.emplace_back(Lit(2, false));
+    clause.emplace_back(Lit(3, false));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
+    clause.emplace_back(Lit(0, false));
+    clause.emplace_back(Lit(1, true));
+    clause.emplace_back(Lit(3, true));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
+    clause.emplace_back(Lit(0, false));
+    clause.emplace_back(Lit(1, true));
+    clause.emplace_back(Lit(4, true));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
+    clause.emplace_back(Lit(0, false));
+    clause.emplace_back(Lit(2, true));
+    clause.emplace_back(Lit(4, true));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
+    clause.emplace_back(Lit(1, false));
+    clause.emplace_back(Lit(3, false));
+    clause.emplace_back(Lit(4, false));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
+    clause.emplace_back(Lit(0, false));
+    clause.emplace_back(Lit(3, true));
+    clause.emplace_back(Lit(4, false));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
+    clause.emplace_back(Lit(5, false));
+    clause.emplace_back(Lit(3, true));
+    clause.emplace_back(Lit(4, false));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
+    clause.emplace_back(Lit(5, false));
+    clause.emplace_back(Lit(2, true));
+    clause.emplace_back(Lit(1, false));
+    clauses1.emplace_back(clause);
+    clause.clear();
+
+    NP np(clauses1);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+    np.solve();
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+    delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
+    std::cout << "Solving done " << (delta_us/1e6) << std::endl;
 
 //    Dynamic d(7, 1, 1050);
 //    for(int i = 0; i < 25000; i++)
