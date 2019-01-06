@@ -73,16 +73,18 @@ public:
                 for (uint64_t i = 0; i < clause.size(); i++) {
                     auto& a = clause_terminal_map[std::make_pair(c, i)];
                     auto& b = clause_terminal_map[std::make_pair(c, (i + 1) % 3)];
-                    CMSat::Lit& lit = terminal_lit_map[b.first];
 
-                    if(lit.sign())
-                        kuramoto(a.first, b.first) = 1;
+                    CMSat::Lit& lit = terminal_lit_map[b.first];
+                    CMSat::Lit& lit1 = terminal_lit_map[a.first];
+
+                    if(lit.sign() || lit1.sign())
+                        kuramoto(a.first, b.first) = -1;
                     else
                         kuramoto(a.first, b.first) = 1;
 
-                    CMSat::Lit& lit1 = terminal_lit_map[a.first];
-                    if(lit1.sign())
-                        kuramoto(b.first, a.first) = 1;
+
+                    if(lit1.sign() || lit.sign())
+                        kuramoto(b.first, a.first) = -1;
                     else
                         kuramoto(b.first, a.first) = 1;
 
@@ -92,7 +94,7 @@ public:
                         CMSat::Lit& lit = terminal_lit_map[t];
                         if(a.second == false && lit.sign() == true) {
                             kuramoto(a.first, t) = -1;
-                            kuramoto(t, a.first) = 1;
+                            kuramoto(t, a.first) = -1;
                         }
                     }
                 }
@@ -119,7 +121,7 @@ public:
 //            for(int j = 0; j < terminal;j++) {
 //                std::cout << "[" << j << "," << s[j] << "] ";
 //            }
-//            std::cout << r << std::endl;
+//            std::cout << i << std::endl;
 
 
 
@@ -158,6 +160,7 @@ public:
                     cnf |= s[t.first];
                 else
                     cnf |= s[t.first];
+
 #if 1
                 for(int c1 = 0; c1 < clauses.size(); c1++) {
                     const std::vector<CMSat::Lit>& clause1 = clauses[c1];
@@ -190,18 +193,24 @@ public:
     vec_t mul(const vec_t& s, const mat_t& m) {
         vec_t ret(terminal);
         for(int i = 0; i < terminal; i++) {
-            ret[i] = not s[i];
+            ret[i] = s[i];
 
+            int maj = 0;
             for(int j = 0; j < terminal; j++) {
                 if(m(i,j) == 1) {
-                    if(distribution(generator) < .05)
+                    if(distribution(generator) < .9)
 //                        ret[i] |= s[i] ^ s[j];
-                        ret[i] &= s[j];
+                        maj += (s[j] == s[i] ? 1 : -1);
+//                        ret[i] ^= not (s[j]);
                 } else if(m(i,j) == -1) {
-                    if(distribution(generator) < .35)
+                    if(distribution(generator) < .9)
 //                        ret[i] |= s[i] ^ (!s[j]);
-                        ret[i] &= s[j];
+                        maj += (s[j] != s[i] ? 1 : -1);
+//                        ret[i] ^= (s[j]);
                 }
+            }
+            if(maj < 0) {
+                ret[i] = not s[i];
             }
         }
 
