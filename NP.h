@@ -10,12 +10,14 @@
 #include <map>
 #include <cryptominisat5/solvertypesmini.h>
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 
 class NP {
     const std::vector<std::vector<CMSat::Lit>>& clauses;
 
-    typedef Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> mat_t;
+    typedef Eigen::SparseMatrix<int> mat_t;
     typedef Eigen::Array<bool, Eigen::Dynamic, 1> vec_t;
+    typedef Eigen::Triplet<int> T;
 
     mat_t kuramoto;
     uint32_t terminal;
@@ -57,12 +59,15 @@ public:
         }
 
         kuramoto = mat_t(terminal, terminal);
+        /*
         for(int i = 0 ; i < terminal; i++) {
             for(int j = 0; j < terminal; j++) {
-                kuramoto(i,j) = 0;
+                kuramoto.insert(i,j) = 0;
             }
         }
+         */
 
+        std::vector<T> triplets;
         for (uint32_t c = 0; c < clauses.size(); c++) {
             const std::vector<CMSat::Lit> &clause = clauses[c];
             if (clause.size() == 1) {
@@ -78,28 +83,35 @@ public:
                     CMSat::Lit& lit1 = terminal_lit_map[a.first];
 
                     if(lit.sign() || lit1.sign())
-                        kuramoto(a.first, b.first) = -1;
+//                        kuramoto.insert(a.first, b.first) = -1;
+                        triplets.emplace_back(T(a.first, b.first, -1));
                     else
-                        kuramoto(a.first, b.first) = 1;
+//                        kuramoto.insert(a.first, b.first) = 1;
+                        triplets.emplace_back(T(a.first, b.first, 1));
 
 
                     if(lit1.sign() || lit.sign())
-                        kuramoto(b.first, a.first) = -1;
+//                        kuramoto.insert(b.first, a.first) = -1;
+                        triplets.emplace_back(T(b.first, a.first, -1));
                     else
-                        kuramoto(b.first, a.first) = 1;
+//                        kuramoto.insert(b.first, a.first) = 1;
+                        triplets.emplace_back(T(b.first, a.first,1));
 
                     std::vector<uint32_t > l = var_terminal[terminal_lit_map[a.first].var()];
                     for(int q = 0; q < l.size(); q++) {
                         int t = l[q];
                         CMSat::Lit& lit = terminal_lit_map[t];
                         if(a.second == false && lit.sign() == true) {
-                            kuramoto(a.first, t) = -1;
-                            kuramoto(t, a.first) = -1;
+                            triplets.emplace_back(T(a.first, t,-1));
+                            triplets.emplace_back(T(t, a.first,-1));
+//                            kuramoto.insert(a.first, t) = -1;
+//                            kuramoto.insert(t, a.first) = -1;
                         }
                     }
                 }
             }
         }
+        kuramoto.setFromTriplets(triplets.begin(), triplets.end());
 
     }
 
@@ -121,7 +133,7 @@ public:
 //            for(int j = 0; j < terminal;j++) {
 //                std::cout << "[" << j << "," << s[j] << "] ";
 //            }
-//            std::cout << i << std::endl;
+            std::cout << i << std::endl;
 
 
 
@@ -162,12 +174,12 @@ public:
                     cnf |= s[t.first];
 
 #if 1
-                for(int c1 = 0; c1 < clauses.size(); c1++) {
+                for(int c1 = c; c1 < clauses.size(); c1++) {
                     const std::vector<CMSat::Lit>& clause1 = clauses[c1];
                     for(int i1 = 0; i1 < clause1.size(); i1++) {
                         const CMSat::Lit& l1 = clause1[i1];
-                        auto t1 = clause_terminal_map[std::make_pair(c1, i1)];
                         if(l.var() == l1.var()) {
+                            auto t1 = clause_terminal_map[std::make_pair(c1, i1)];
                             if(l.sign() != l1.sign()) {
                                 if(s[t.first] == s[t1.first])
                                     return false;
@@ -192,20 +204,21 @@ public:
 
     vec_t mul(const vec_t& s, const mat_t& m) {
         vec_t ret(terminal);
-        for(int i = 0; i < terminal; i++) {
+        for(int i = 0; i < m.outerSize(); i++) {
+
             ret[i] = s[i];
 
             int maj = 0;
-            for(int j = 0; j < terminal; j++) {
-                if(m(i,j) == 1) {
-                    if(distribution(generator) < .9)
+            for(mat_t::InnerIterator j(m, i); j ; ++j) {
+                if(j.value() == 1) {
+                    if(distribution(generator) < .97)
 //                        ret[i] |= s[i] ^ s[j];
-                        maj += (s[j] == s[i] ? 1 : -1);
+                        maj += (s[j.col()] == s[j.row()] ? 1 : -1);
 //                        ret[i] ^= not (s[j]);
-                } else if(m(i,j) == -1) {
-                    if(distribution(generator) < .9)
+                } else if(j.value() == -1) {
+                    if(distribution(generator) < .97)
 //                        ret[i] |= s[i] ^ (!s[j]);
-                        maj += (s[j] != s[i] ? 1 : -1);
+                        maj += (s[j.col()] != s[j.row()] ? 1 : -1);
 //                        ret[i] ^= (s[j]);
                 }
             }

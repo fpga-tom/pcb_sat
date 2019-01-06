@@ -56,11 +56,11 @@ lbool find(uint64_t num_pages) {
     std::vector<std::pair<int ,int >> E;
 
     srand(3);
-    int V_count = 9;
+    int V_count = 35;
     for(int i = 0; i < V_count; i++) {
         V.emplace_back(i);
     }
-    int pairs = 9;
+    int pairs = 35;
     int max_pins = 5;
     for(int i = 0; i < pairs; i++) {
         auto r1 = rand() % V_count;
@@ -260,10 +260,7 @@ lbool find(uint64_t num_pages) {
     solver.new_var();
     solver.new_var();
 
-    clauses.emplace_back(std::vector<Lit>{Lit(tseitin.indexof(target), false), Lit(v1, false), Lit(v2, false)});
-    clauses.emplace_back(std::vector<Lit>{Lit(tseitin.indexof(target), false), Lit(v1, false), Lit(v2, true)});
-    clauses.emplace_back(std::vector<Lit>{Lit(tseitin.indexof(target), false), Lit(v1, true), Lit(v2, false)});
-    clauses.emplace_back(std::vector<Lit>{Lit(tseitin.indexof(target), false), Lit(v1, true), Lit(v2, true)});
+    clauses.emplace_back(std::vector<Lit>{Lit(tseitin.indexof(target), false)});
 
     for(auto&c : clauses) {
         if(c.size() == 1) {
@@ -306,7 +303,7 @@ lbool find(uint64_t num_pages) {
     clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 
     uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
-    std::cout << "Cryptominisat done " << (delta_us/1e6) << std::endl;
+    std::cout << "Cryptominisat done " << (delta_us/1e6) << " " << ret << std::endl;
 
 #if 1
     if(ret == l_True) {
